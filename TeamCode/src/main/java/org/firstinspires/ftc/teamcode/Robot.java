@@ -89,4 +89,7 @@ public class Robot {
     public void setNectarLauncher(double power) {
         nectarLauncher.setPower(power);
     }
+    public void nectarGateOpen(double position) {
+        nectarGate.setPosition(position);
+    }
 }

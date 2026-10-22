@@ -40,6 +40,9 @@ public class TeleOpTbd extends LinearOpMode {
             if (gamepad1.right_trigger_pressed) {
                 robot.setNectarLauncher(0.5);
             }
+            if (gamepad1.a) {
+                robot.nectarGateOpen(1);
+            }
         }
     }
 }
