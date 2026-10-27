@@ -4,20 +4,24 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
+
 
 public class Robot {
     // Declare hardware members
-    public DcMotor frontLeftWheel = null;
-    public DcMotor backLeftWheel = null;
-    public DcMotor frontRightWheel = null;
-    public DcMotor backRightWheel = null;
-    public DcMotorEx pollenLauncher = null;
-    public DcMotorEx nectarLauncher = null;
-    public Servo nectarGate = null;
-    public Servo pollenGate = null;
+    private DcMotor frontLeftWheel = null;
+    private DcMotor backLeftWheel = null;
+    private DcMotor frontRightWheel = null;
+    private DcMotor backRightWheel = null;
+    private DcMotorEx pollenLauncher = null;
+    private DcMotorEx nectarLauncher = null;
+    private Servo nectarGate = null;
+    private Servo pollenGate = null;
     private LinearOpMode opMode;
-
+    private IMU imu;
     // Constructor
     public Robot(LinearOpMode opMode) {
         this.opMode = opMode;
@@ -51,17 +55,28 @@ public class Robot {
         backLeftWheel.setPower(0);
         frontRightWheel.setPower(0);
         backRightWheel.setPower(0);
+
+        imu = hardwareMap.get(IMU.class, "imu");
+
+        RevHubOrientationOnRobot.LogoFacingDirection logoDirection =
+                RevHubOrientationOnRobot.LogoFacingDirection.UP;
+        RevHubOrientationOnRobot.UsbFacingDirection usbDirection =
+                RevHubOrientationOnRobot.UsbFacingDirection.FORWARD;
+
+        RevHubOrientationOnRobot orientationOnRobot = new
+                RevHubOrientationOnRobot(logoDirection, usbDirection);
+        imu.initialize(new IMU.Parameters(orientationOnRobot));
     }
 
     // Helper methods keep OpModes clean
-    public void setDrivePower(double axial, double lateral, double yaw) {
+    public void setDrivePower(double forward, double right, double rotate) {
 
         double max;
 
-        double frontLeftPower  = axial + lateral + yaw;
-        double frontRightPower = axial - lateral - yaw;
-        double backLeftPower   = axial - lateral + yaw;
-        double backRightPower  = axial + lateral - yaw;
+        double frontLeftPower  = forward + right + rotate;
+        double frontRightPower = forward - right - rotate;
+        double backLeftPower   = forward - right + rotate;
+        double backRightPower  = forward + right - rotate;
 
         // Normalize the values so no wheel power exceeds 100%
         // This ensures that the robot maintains the desired motion.
@@ -92,4 +107,22 @@ public class Robot {
     public void nectarGateOpen(double position) {
         nectarGate.setPosition(position);
     }
+    public void setRelativeDrive(double forward, double right, double rotate, boolean resetView, boolean robotView) {
+        opMode.telemetry.addLine("Press A to reset Yaw");
+        opMode.telemetry.addLine("Hold left bumper to drive in robot relative");
+        opMode.telemetry.addLine("The left joystick sets the robot direction");
+        opMode.telemetry.addLine("Moving the right joystick left and right turns the robot");
+
+        // If you press the A button, then you reset the Yaw to be zero from the way
+        // the robot is currently pointing
+        if (resetView) {
+            imu.resetYaw();
+        }
+        // If you press the left bumper, you get a drive from the point of view of the robot
+        // (much like driving an RC vehicle)
+        if (robotView) {
+            setDrivePower(forward, right, rotate);
+        } else {
+            driveFieldRelative(forward, right, rotate);
+        }
 }
