@@ -104,12 +104,17 @@ public class Robot {
     public void setNectarLauncher(double power) {
         nectarLauncher.setPower(power);
     }
-    public void nectarGateOpen(double position) {
-        nectarGate.setPosition(position);
+
+    public void nectarGateOpen() { 
+        // 0.5 is equal to 90 degrees
+        nectarGate.setPosition(0.5);
     }
-    public void pollenGateOpen(double position) {
-        pollenGate.setPosition(position);
+    
+    public void pollenGateOpen() {
+        // 0.22 is equal to 40 degrees
+        pollenGate.setPosition(0.22);
     }
+    
     public void setRelativeDrive(double forward, double right, double rotate, boolean resetView, boolean robotView) {
         opMode.telemetry.addLine("Press A to reset Yaw");
         opMode.telemetry.addLine("Hold left bumper to drive in robot relative");
