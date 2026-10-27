@@ -46,6 +46,8 @@ public class TeleOpTbd extends LinearOpMode {
             }
             if (gamepad1.x) {
                 robot.pollenGateOpen(1);
+            }
+            
         }
     }
 }
