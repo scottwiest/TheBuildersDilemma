@@ -53,8 +53,13 @@ public class TeleOpTbd extends LinearOpMode {
                 robot.setNectarLauncher(0.5);
             }
             if (gamepad1.a) {
-                robot.nectarGateOpen(1);
+                robot.nectarGateOpen();
+                sleep (500);
             }
+            if (gamepad1.x) {
+                robot.pollenGateOpen();
+            }
+            
         }
     }
 }
