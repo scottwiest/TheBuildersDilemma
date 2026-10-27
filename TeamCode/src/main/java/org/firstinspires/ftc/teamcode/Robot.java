@@ -107,15 +107,16 @@ public class Robot {
     public void nectarGateOpen(double position) {
         nectarGate.setPosition(position);
     }
-    public void setRelativeDrive(double forward, double right, double rotate, boolean resetView, boolean robotView) {
-        opMode.telemetry.addLine("Press A to reset Yaw");
-        opMode.telemetry.addLine("Hold left bumper to drive in robot relative");
-        opMode.telemetry.addLine("The left joystick sets the robot direction");
-        opMode.telemetry.addLine("Moving the right joystick left and right turns the robot");
-
+    public void setRelativeDrive(
+            double forward,
+            double right,
+            double rotate,
+            boolean resetRotation,
+            boolean robotView
+    ) {
         // If you press the A button, then you reset the Yaw to be zero from the way
         // the robot is currently pointing
-        if (resetView) {
+        if (resetRotation) {
             imu.resetYaw();
         }
         // If you press the left bumper, you get a drive from the point of view of the robot
@@ -125,4 +126,22 @@ public class Robot {
         } else {
             driveFieldRelative(forward, right, rotate);
         }
+    }
+
+    private void driveFieldRelative(double forward, double right, double rotate) {
+        // First, convert direction being asked to drive to polar coordinates
+        double theta = Math.atan2(forward, right);
+        double r = Math.hypot(right, forward);
+
+        // Second, rotate angle by the angle the robot is pointing
+        theta = AngleUnit.normalizeRadians(theta -
+                imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS));
+
+        // Third, convert back to cartesian
+        double newForward = r * Math.sin(theta);
+        double newRight = r * Math.cos(theta);
+
+        // Finally, call the drive method with robot relative forward and right amounts
+        setDrivePower(newForward, newRight, rotate);
+    }
 }

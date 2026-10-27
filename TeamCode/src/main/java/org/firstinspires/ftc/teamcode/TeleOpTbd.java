@@ -19,12 +19,23 @@ public class TeleOpTbd extends LinearOpMode {
         while (opModeIsActive()) {
             // Read gamepad inputs
             // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
-            double axial = -gamepad1.left_stick_y;  // Note: pushing stick forward gives negative value
-            double lateral = gamepad1.left_stick_x;
-            double yaw = gamepad1.right_stick_x;
+            double forward = -gamepad1.left_stick_y;  // Note: pushing stick forward gives negative value
+            double right = gamepad1.left_stick_x;
+            double rotate = gamepad1.right_stick_x;
+
+            boolean relativeDriveFlag = false;
 
             // Drive control
-            robot.setDrivePower(axial, lateral, yaw);
+            if(relativeDriveFlag) {
+                telemetry.addLine("Press A to reset the rotation");
+                telemetry.addLine("Hold left bumper to drive in robot relative");
+                telemetry.addLine("The left joystick sets the robot direction");
+                telemetry.addLine("Moving the right joystick left and right turns the robot");
+
+                robot.setRelativeDrive(forward, right, rotate, false, false);
+            } else {
+                robot.setDrivePower(forward, right, rotate);
+            }
 
             // Servo control
 //            if (gamepad1.left_bumper) {
