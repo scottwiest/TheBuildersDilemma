@@ -38,20 +38,6 @@ public class TeleOpTbd extends LinearOpMode {
             }
 
             // Servo control
-//            if (gamepad1.left_bumper) {
-//                robot.openPollenGate();
-//            }
-//            if (gamepad1.right_bumper) {
-//                robot.openNectarGate();
-//            }
-
-            // Launcher control
-            if (gamepad1.left_trigger_pressed) {
-                robot.setPollenLauncherPower(0.5);
-            }
-            if (gamepad1.right_trigger_pressed) {
-                robot.setNectarLauncher(0.5);
-            }
             if (gamepad1.a) {
                 robot.nectarGateOpen();
                 sleep (500);
@@ -62,7 +48,14 @@ public class TeleOpTbd extends LinearOpMode {
                 sleep (500);
                 robot.pollenGateClose();
             }
-            
+
+            // Launcher control
+            if (gamepad1.left_trigger_pressed) {
+                robot.setPollenLauncherPower(0.5);
+            }
+            if (gamepad1.right_trigger_pressed) {
+                robot.setNectarLauncher(0.5);
+            }
         }
     }
 }
