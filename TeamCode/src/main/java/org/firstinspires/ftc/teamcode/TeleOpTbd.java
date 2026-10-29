@@ -26,7 +26,7 @@ public class TeleOpTbd extends LinearOpMode {
             boolean relativeDriveFlag = false;
 
             // Drive control
-            if(relativeDriveFlag) {
+            if (relativeDriveFlag) {
                 telemetry.addLine("Press A to reset the rotation");
                 telemetry.addLine("Hold left bumper to drive in robot relative");
                 telemetry.addLine("The left joystick sets the robot direction");
@@ -40,31 +40,29 @@ public class TeleOpTbd extends LinearOpMode {
             // Servo control
             if (gamepad1.left_trigger_pressed) {
                 robot.nectarGateOpen();
-                sleep (500);
+                sleep(500);
                 robot.nectarGateClose();
             }
             if (gamepad1.right_trigger_pressed) {
                 robot.pollenGateOpen();
-                sleep (500);
+                sleep(500);
                 robot.pollenGateClose();
             }
 
             // Launcher control
-            if (gamepad1.left_bumper_pressed) {
+            if (gamepad1.left_bumper) {
                 robot.setPollenLauncherPower(0.5);
             }
             if (gamepad1.leftBumperWasReleased()) {
                 robot.setPollenLauncherPower(0);
             }
-            if (gamepad1.right_bumper_pressed) {
+            if (gamepad1.right_bumper) {
                 robot.setNectarLauncher(0.5);
 
-            if (gampad1.rightBumperWasReleased ()) {
-                robot.setNectarLauncherPower(0);
+                if (gamepad1.rightBumperWasReleased()) {
+                    robot.setNectarLauncher(0);
+                }
             }
-            }
-
-            
         }
     }
 }
