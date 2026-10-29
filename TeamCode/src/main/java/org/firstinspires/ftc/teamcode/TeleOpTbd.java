@@ -53,9 +53,18 @@ public class TeleOpTbd extends LinearOpMode {
             if (gamepad1.left_bumper_pressed) {
                 robot.setPollenLauncherPower(0.5);
             }
+            if (gamepad1.leftBumperWasReleased()) {
+                robot.setPollenLauncherPower(0);
+            }
             if (gamepad1.right_bumper_pressed) {
                 robot.setNectarLauncher(0.5);
+
+            if (gampad1.rightBumperWasReleased ()) {
+                robot.setNectarLauncherPower(0);
             }
+            }
+
+            
         }
     }
 }

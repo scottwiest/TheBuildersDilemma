@@ -107,20 +107,20 @@ public class Robot {
 
     public void nectarGateOpen() {
         // 0.5 is equal to 90 degrees
-        nectarGate.setPosition(0.5);
+        nectarGate.setPosition(0);
     }
 
     public void pollenGateOpen() {
         // 0.22 is equal to 40 degrees
-        pollenGate.setPosition(0.22);
+        pollenGate.setPosition(0);
     }
 
     public void pollenGateClose() {
-        pollenGate.setPosition (0);
+        pollenGate.setPosition (0.22);
     }
 
     public void nectarGateClose() {
-        nectarGate.setPosition (0);
+        nectarGate.setPosition (0.22);
     }
 
     public void setRelativeDrive(
