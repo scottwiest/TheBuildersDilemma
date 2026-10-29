@@ -22,6 +22,7 @@ public class Robot {
     private Servo pollenGate = null;
     private LinearOpMode opMode;
     private IMU imu;
+
     // Constructor
     public Robot(LinearOpMode opMode) {
         this.opMode = opMode;
@@ -31,7 +32,7 @@ public class Robot {
     public void init(HardwareMap hardwareMap) {
 
         // Map devices to the names configured on the Driver Station / Control Hub
-        frontLeftWheel  = hardwareMap.get(DcMotor.class, "front_left_wheel");
+        frontLeftWheel = hardwareMap.get(DcMotor.class, "front_left_wheel");
         backLeftWheel = hardwareMap.get(DcMotor.class, "back_left_wheel");
         frontRightWheel = hardwareMap.get(DcMotor.class, "front_right_wheel");
         backRightWheel = hardwareMap.get(DcMotor.class, "back_right_wheel");
@@ -43,6 +44,10 @@ public class Robot {
         backLeftWheel.setDirection(DcMotor.Direction.FORWARD);
         frontRightWheel.setDirection(DcMotor.Direction.REVERSE);
         backRightWheel.setDirection(DcMotor.Direction.REVERSE);
+        nectarLauncher.setDirection(DcMotorEx.Direction.REVERSE);
+        pollenLauncher.setDirection(DcMotorEx.Direction.FORWARD);
+        nectarGate.setDirection(Servo.Direction.FORWARD);
+        pollenGate.setDirection(Servo.Direction.REVERSE);
 
         // Set zero-power behavior
         frontLeftWheel.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -73,10 +78,10 @@ public class Robot {
 
         double max;
 
-        double frontLeftPower  = forward + right + rotate;
+        double frontLeftPower = forward + right + rotate;
         double frontRightPower = forward - right - rotate;
-        double backLeftPower   = forward - right + rotate;
-        double backRightPower  = forward + right - rotate;
+        double backLeftPower = forward - right + rotate;
+        double backRightPower = forward + right - rotate;
 
         // Normalize the values so no wheel power exceeds 100%
         // This ensures that the robot maintains the desired motion.
@@ -85,18 +90,20 @@ public class Robot {
         max = Math.max(max, Math.abs(backRightPower));
 
         if (max > 1.0) {
-            frontLeftPower  /= max;
+            frontLeftPower /= max;
             frontRightPower /= max;
-            backLeftPower   /= max;
-            backRightPower  /= max;
-
-            // Send calculated power to wheels
-            frontLeftWheel.setPower(frontLeftPower);
-            frontRightWheel.setPower(frontRightPower);
-            backLeftWheel.setPower(backLeftPower);
-            backRightWheel.setPower(backRightPower);
+            backLeftPower /= max;
+            backRightPower /= max;
         }
+
+        double scalingFactor = 0.65;
+        // Send calculated power to wheels
+        frontLeftWheel.setPower(frontLeftPower * scalingFactor);
+        frontRightWheel.setPower(frontRightPower * scalingFactor);
+        backLeftWheel.setPower(backLeftPower * scalingFactor);
+        backRightWheel.setPower(backRightPower * scalingFactor);
     }
+
     public void setPollenLauncherPower(double power) {
         pollenLauncher.setPower(power);
     }
@@ -116,11 +123,11 @@ public class Robot {
     }
 
     public void pollenGateClose() {
-        pollenGate.setPosition (0);
+        pollenGate.setPosition(0);
     }
 
     public void nectarGateClose() {
-        nectarGate.setPosition (0);
+        nectarGate.setPosition(0);
     }
 
     public void setRelativeDrive(
