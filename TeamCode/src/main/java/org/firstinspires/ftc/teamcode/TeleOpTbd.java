@@ -14,6 +14,8 @@ public class TeleOpTbd extends LinearOpMode {
         // Initialize the robot hardware using the OpMode's hardwareMap
         robot.init(hardwareMap);
 
+        robot.setRunUsingEncoder();
+
         waitForStart();
 
         while (opModeIsActive()) {
@@ -58,10 +60,10 @@ public class TeleOpTbd extends LinearOpMode {
             }
             if (gamepad1.right_bumper) {
                 robot.setNectarLauncher(0.5);
+            }
 
-                if (gamepad1.rightBumperWasReleased()) {
-                    robot.setNectarLauncher(0);
-                }
+            if (gamepad1.rightBumperWasReleased()) {
+                robot.setNectarLauncher(0);
             }
         }
     }
