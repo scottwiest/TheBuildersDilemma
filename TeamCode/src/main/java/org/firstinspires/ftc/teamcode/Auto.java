@@ -21,6 +21,11 @@ public class Auto extends LinearOpMode{
         //Move left into parking zone
         setDrivePower(0,-1,0);
         sleep(2500);
-    }
 
+        //Stop the robot
+        setDrivePower(0,0,0);
+
+        telemetry.addData("Status", "Autonomous Complete!");
+        telemetry.update();
+    }
 }
