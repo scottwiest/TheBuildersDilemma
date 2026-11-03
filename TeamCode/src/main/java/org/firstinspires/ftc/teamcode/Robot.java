@@ -2,12 +2,14 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotor.RunMode;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 
 public class Robot {
@@ -22,6 +24,11 @@ public class Robot {
     private Servo pollenGate = null;
     private LinearOpMode opMode;
     private IMU imu;
+    private ElapsedTime runtime = new ElapsedTime();
+    static final double COUNTS_PER_TIRE_REV = 537.7;
+    static final double WHEEL_DIAMETER_INCHES = 4.0;
+    static final double COUNTS_PER_INCH = (COUNTS_PER_TIRE_REV) / (WHEEL_DIAMETER_INCHES * 3.14159);
+
     // Constructor
     public Robot(LinearOpMode opMode) {
         this.opMode = opMode;
@@ -31,10 +38,12 @@ public class Robot {
     public void init(HardwareMap hardwareMap) {
 
         // Map devices to the names configured on the Driver Station / Control Hub
-        frontLeftWheel  = hardwareMap.get(DcMotor.class, "front_left_wheel");
+        frontLeftWheel = hardwareMap.get(DcMotor.class, "front_left_wheel");
         backLeftWheel = hardwareMap.get(DcMotor.class, "back_left_wheel");
         frontRightWheel = hardwareMap.get(DcMotor.class, "front_right_wheel");
         backRightWheel = hardwareMap.get(DcMotor.class, "back_right_wheel");
+        pollenLauncher = hardwareMap.get(DcMotorEx.class, "pollen_launcher");
+        pollenLauncher = hardwareMap.get(DcMotorEx.class, "nectar_launcher");
         nectarGate = hardwareMap.get(Servo.class, "nectar_gate");
         pollenGate = hardwareMap.get(Servo.class, "pollen_gate");
 
@@ -43,12 +52,26 @@ public class Robot {
         backLeftWheel.setDirection(DcMotor.Direction.FORWARD);
         frontRightWheel.setDirection(DcMotor.Direction.REVERSE);
         backRightWheel.setDirection(DcMotor.Direction.REVERSE);
+        pollenLauncher.setDirection(DcMotorEx.Direction.REVERSE);
+        pollenLauncher.setDirection(DcMotorEx.Direction.FORWARD);
+        nectarLauncher.setDirection(DcMotorEx.Direction.FORWARD);
+        pollenGate.setDirection(Servo.Direction.REVERSE);
 
         // Set zero-power behavior
         frontLeftWheel.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         backLeftWheel.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         frontRightWheel.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         backRightWheel.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+        frontRightWheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        backRightWheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        frontLeftWheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        backRightWheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        frontLeftWheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        backLeftWheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        frontRightWheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        backRightWheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         // Reset and stop motors
         frontLeftWheel.setPower(0);
@@ -68,15 +91,30 @@ public class Robot {
         imu.initialize(new IMU.Parameters(orientationOnRobot));
     }
 
+    public void setRunUsingEncoder() {
+        frontLeftWheel.setMode(RunMode.STOP_AND_RESET_ENCODER);
+        frontRightWheel.setMode(RunMode.STOP_AND_RESET_ENCODER);
+        backLeftWheel.setMode(RunMode.STOP_AND_RESET_ENCODER);
+        backRightWheel.setMode(RunMode.STOP_AND_RESET_ENCODER);
+        pollenLauncher.setMode(RunMode.STOP_AND_RESET_ENCODER);
+        nectarLauncher.setMode(RunMode.STOP_AND_RESET_ENCODER);
+
+        frontLeftWheel.setMode(RunMode.RUN_USING_ENCODER);
+        frontRightWheel.setMode(RunMode.RUN_USING_ENCODER);
+        backLeftWheel.setMode(RunMode.RUN_USING_ENCODER);
+        backRightWheel.setMode(RunMode.RUN_USING_ENCODER);
+        pollenLauncher.setMode(RunMode.RUN_USING_ENCODER);
+        nectarLauncher.setMode(RunMode.RUN_USING_ENCODER);
+    }
     // Helper methods keep OpModes clean
     public void setDrivePower(double forward, double right, double rotate) {
 
         double max;
 
-        double frontLeftPower  = forward + right + rotate;
+        double frontLeftPower = forward + right + rotate;
         double frontRightPower = forward - right - rotate;
-        double backLeftPower   = forward - right + rotate;
-        double backRightPower  = forward + right - rotate;
+        double backLeftPower = forward - right + rotate;
+        double backRightPower = forward + right - rotate;
 
         // Normalize the values so no wheel power exceeds 100%
         // This ensures that the robot maintains the desired motion.
@@ -85,29 +123,113 @@ public class Robot {
         max = Math.max(max, Math.abs(backRightPower));
 
         if (max > 1.0) {
-            frontLeftPower  /= max;
+            frontLeftPower /= max;
             frontRightPower /= max;
-            backLeftPower   /= max;
-            backRightPower  /= max;
+            backLeftPower /= max;
+            backRightPower /= max;
+        }
 
-            // Send calculated power to wheels
-            frontLeftWheel.setPower(frontLeftPower);
-            frontRightWheel.setPower(frontRightPower);
-            backLeftWheel.setPower(backLeftPower);
-            backRightWheel.setPower(backRightPower);
+        double scalingFactor = 0.65;
+        // Send calculated power to wheels
+        frontLeftWheel.setPower(frontLeftPower * scalingFactor);
+        frontRightWheel.setPower(frontRightPower * scalingFactor);
+        backLeftWheel.setPower(backLeftPower * scalingFactor);
+        backRightWheel.setPower(backRightPower * scalingFactor);
+    }
+    public void runDriveInstructions(
+            double speed,
+            double leftInches,
+            double rightInches,
+            double timeoutS
+    ) {
+        int newLeftFrontTarget;
+        int newRightFrontTarget;
+        int newLeftBackTarget;
+        int newRightBackTarget;
+
+        // Ensure that the OpMode is still active
+        if (opMode.opModeIsActive()) {
+
+            // Determine new target position, and pass to motor controller
+            newLeftFrontTarget =
+                    frontLeftWheel.getCurrentPosition() + (int) (leftInches * COUNTS_PER_INCH);
+            newRightFrontTarget =
+                    frontRightWheel.getCurrentPosition() + (int) (rightInches * COUNTS_PER_INCH);
+            newLeftBackTarget = backLeftWheel.getCurrentPosition() + (int) (leftInches * COUNTS_PER_INCH);
+            newRightBackTarget =
+                    backRightWheel.getCurrentPosition() + (int) (rightInches * COUNTS_PER_INCH);
+            frontLeftWheel.setTargetPosition(newLeftFrontTarget);
+            frontRightWheel.setTargetPosition(newRightFrontTarget);
+            backLeftWheel.setTargetPosition(newLeftBackTarget);
+            backRightWheel.setTargetPosition(newRightBackTarget);
+
+            // Turn On RUN_TO_POSITION
+            frontLeftWheel.setMode(RunMode.RUN_TO_POSITION);
+            frontRightWheel.setMode(RunMode.RUN_TO_POSITION);
+            backLeftWheel.setMode(RunMode.RUN_TO_POSITION);
+            backRightWheel.setMode(RunMode.RUN_TO_POSITION);
+
+            // reset the timeout time and start motion.
+            runtime.reset();
+            frontLeftWheel.setPower(Math.abs(speed));
+            frontRightWheel.setPower(Math.abs(speed));
+            backLeftWheel.setPower(Math.abs(speed));
+            backRightWheel.setPower(Math.abs(speed));
+
+            // keep looping while we are still active, and there is time left, and both motors are running.
+            // Note: We use (isBusy() && isBusy()) in the loop test, which means that when EITHER motor hits
+            // its target position, the motion will stop.  This is "safer" in the event that the robot will
+            // always end the motion as soon as possible.
+            // However, if you require that BOTH motors have finished their moves before the robot continues
+            // onto the next step, use (isBusy() || isBusy()) in the loop test.
+            while (opMode.opModeIsActive() &&
+                    (runtime.seconds() < timeoutS) &&
+                    (frontLeftWheel.isBusy() && frontRightWheel.isBusy() && backLeftWheel.isBusy()
+                            && backRightWheel.isBusy())) {
+                opMode.sleep(10);
+            }
+
+            // Stop all motion;
+            frontLeftWheel.setPower(0);
+            frontRightWheel.setPower(0);
+            backLeftWheel.setPower(0);
+            backRightWheel.setPower(0);
+
+            // Turn off RUN_TO_POSITION
+            frontLeftWheel.setMode(RunMode.RUN_USING_ENCODER);
+            frontRightWheel.setMode(RunMode.RUN_USING_ENCODER);
+            backLeftWheel.setMode(RunMode.RUN_USING_ENCODER);
+            backRightWheel.setMode(RunMode.RUN_USING_ENCODER);
+
+            opMode.sleep(100);   // pause after each move.
         }
     }
+        public void leftStrafe() {
+            frontRightWheel.setPower(1);
+            frontLeftWheel.setPower(-1);
+            backRightWheel.setPower(-1);
+            backLeftWheel.setPower(1);
+        }
+
+        public void rightStrafe() {
+            frontRightWheel.setPower(-1);
+            frontLeftWheel.setPower(1);
+            backRightWheel.setPower(1);
+            backLeftWheel.setPower(-1);
+        }
+
+
     public void setPollenLauncherPower(double power) {
         pollenLauncher.setPower(power);
     }
 
     public void setNectarLauncher(double power) {
-        nectarLauncher.setPower(power);
+        pollenLauncher.setPower(power);
     }
 
     public void nectarGateOpen() {
         // 0.5 is equal to 90 degrees
-        nectarGate.setPosition(0.5);
+        nectarGate.setPosition(0);
     }
 
     public void pollenGateOpen() {
@@ -116,11 +238,11 @@ public class Robot {
     }
 
     public void pollenGateClose() {
-        pollenGate.setPosition (0);
+        pollenGate.setPosition(0);
     }
 
     public void nectarGateClose() {
-        nectarGate.setPosition (0);
+        nectarGate.setPosition (0.22);
     }
 
     public void setRelativeDrive(
