@@ -18,6 +18,9 @@ public class TeleOpTbd extends LinearOpMode {
 
         waitForStart();
 
+        double pollenPosition = 0.0;
+        double nectarPosition = 0.0;
+
         while (opModeIsActive()) {
             // Read gamepad inputs
             // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
@@ -67,6 +70,26 @@ public class TeleOpTbd extends LinearOpMode {
             if (gamepad1.b) {
                 robot.setTransferIntake(0.5);
             }
+
+            //Testing servos
+            if (gamepad1.dpad_up){
+                pollenPosition=pollenPosition+0.1;
+            }
+            if(gamepad1.dpad_down){
+                pollenPosition = pollenPosition-0.1;
+            }
+            setPollenGate(pollenPosition);
+            if (gamepad1.dpad_left){
+                nectarPosition=nectarPosition+0.1;
+            }
+            if(gamepad1.dpad_right){
+                nectarPosition = nectarPosition-0.1;
+            }
+            setNectarGate(pollenPosition);
+
+            telemetry.addLine("Nectar Gate Position: " + nectarPosition);
+            telemetry.addLine("Pollen Gate Position: " + pollenPosition);
+            telemetry.update();
         }
     }
 }

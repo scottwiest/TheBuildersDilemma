@@ -249,6 +249,13 @@ public class Robot {
         nectarGate.setPosition (0.22);
     }
 
+    public void setPollenGate(double position){ 
+        pollenGate.setPosition(position);
+    }
+    public void setNectarGate(double position){
+        nectarGate.setPosition(position);
+    }
+
     public void setRelativeDrive(
             double forward,
             double right,
