@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotor.RunMode;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -20,6 +21,7 @@ public class Robot {
     private DcMotor backRightWheel = null;
     private DcMotorEx pollenLauncher = null;
     private DcMotorEx nectarLauncher = null;
+    private DcMotor transferIntake = null;
     private Servo nectarGate = null;
     private Servo pollenGate = null;
     private LinearOpMode opMode;
@@ -44,6 +46,7 @@ public class Robot {
         backRightWheel = hardwareMap.get(DcMotor.class, "back_right_wheel");
         pollenLauncher = hardwareMap.get(DcMotorEx.class, "pollen_launcher");
         pollenLauncher = hardwareMap.get(DcMotorEx.class, "nectar_launcher");
+        transferIntake = hardwareMap.get(DcMotor.class, "transfer_intake");
         nectarGate = hardwareMap.get(Servo.class, "nectar_gate");
         pollenGate = hardwareMap.get(Servo.class, "pollen_gate");
 
@@ -53,9 +56,8 @@ public class Robot {
         frontRightWheel.setDirection(DcMotor.Direction.REVERSE);
         backRightWheel.setDirection(DcMotor.Direction.REVERSE);
         pollenLauncher.setDirection(DcMotorEx.Direction.REVERSE);
-        pollenLauncher.setDirection(DcMotorEx.Direction.FORWARD);
         nectarLauncher.setDirection(DcMotorEx.Direction.FORWARD);
-        pollenGate.setDirection(Servo.Direction.REVERSE);
+        transferIntake.setDirection(DcMotorSimple.Direction.FORWARD);
 
         // Set zero-power behavior
         frontLeftWheel.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -226,7 +228,9 @@ public class Robot {
     public void setNectarLauncher(double power) {
         pollenLauncher.setPower(power);
     }
-
+    public void setTransferIntake(double power) {
+        transferIntake.setPower(power);
+    }
     public void nectarGateOpen() {
         // 0.5 is equal to 90 degrees
         nectarGate.setPosition(0);
