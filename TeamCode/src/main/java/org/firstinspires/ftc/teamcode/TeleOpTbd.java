@@ -85,7 +85,7 @@ public class TeleOpTbd extends LinearOpMode {
             if(gamepad1.dpad_right){
                 nectarPosition = nectarPosition-0.1;
             }
-            setNectarGate(pollenPosition);
+            setNectarGate(nectarPosition);
 
             telemetry.addLine("Nectar Gate Position: " + nectarPosition);
             telemetry.addLine("Pollen Gate Position: " + pollenPosition);
