@@ -61,7 +61,6 @@ public class TeleOpTbd extends LinearOpMode {
             if (gamepad1.right_bumper) {
                 robot.setNectarLauncher(0.5);
             }
-
             if (gamepad1.rightBumperWasReleased()) {
                 robot.setNectarLauncher(0);
             }
