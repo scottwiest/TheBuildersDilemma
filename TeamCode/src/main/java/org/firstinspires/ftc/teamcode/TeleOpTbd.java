@@ -8,6 +8,8 @@ import com.qualcomm.robotcore.hardware.IMU;
 public class TeleOpTbd extends LinearOpMode {
 
     Robot robot = new Robot(this);
+    double pollenGatePosition = 0.0;
+    double nectarGatePosition = 0.0;
 
     @Override
     public void runOpMode() {
@@ -18,9 +20,6 @@ public class TeleOpTbd extends LinearOpMode {
 
         waitForStart();
 
-        double pollenPosition = 0.0;
-        double nectarPosition = 0.0;
-
         while (opModeIsActive()) {
             // Read gamepad inputs
             // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
@@ -28,80 +27,56 @@ public class TeleOpTbd extends LinearOpMode {
             double right = gamepad1.left_stick_x;
             double rotate = gamepad1.right_stick_x;
 
-            boolean relativeDriveFlag = false;
+            boolean relativeDriveFlag = true;
 
             // Drive control
             if (relativeDriveFlag) {
-                telemetry.addLine("Press A to reset the rotation");
-                telemetry.addLine("Hold left bumper to drive in robot relative");
-                telemetry.addLine("The left joystick sets the robot direction");
-                telemetry.addLine("Moving the right joystick left and right turns the robot");
-
-                robot.setRelativeDrive(forward, right, rotate, false, false);
+                robot.setRelativeDrive(forward, right, rotate);
             } else {
                 robot.setDrivePower(forward, right, rotate);
             }
 
-            // Servo control
-            if (gamepad1.left_trigger_pressed) {
-                robot.nectarGateOpen();
-                sleep(500);
-                robot.nectarGateClose();
-            }
-            if (gamepad1.right_trigger_pressed) {
+            // Pollen Servo control
+            if (gamepad1.leftBumperWasPressed()) {
                 robot.pollenGateOpen();
                 sleep(500);
                 robot.pollenGateClose();
             }
-
-            // Launcher control
-            if (gamepad1.left_bumper) {
-                robot.setPollenLauncher(0.02);
+            // Pollen Launcher control
+            if (gamepad1.leftTriggerWasPressed()) {
+                robot.setPollenLauncher(0.55);
             }
-            if (gamepad1.leftBumperWasReleased()) {
+            if (gamepad1.leftTriggerWasReleased()) {
                 robot.setPollenLauncher(0);
             }
-            if (gamepad1.right_bumper) {
+
+            // Nectar Servo Control
+            if (gamepad1.rightBumperWasPressed()) {
+                robot.nectarGateOpen();
+                sleep(500);
+                robot.nectarGateClose();
+            }
+            // Nectar Launcher Control
+            if (gamepad1.rightTriggerWasPressed()) {
                 robot.setNectarLauncher(0.5);
             }
-            if (gamepad1.rightBumperWasReleased()) {
+            if (gamepad1.rightTriggerWasReleased()) {
                 robot.setNectarLauncher(0);
             }
-            if (gamepad1.b) {
+
+
+            if (gamepad1.dpadUpWasPressed()) {
                 robot.setTransferIntake(0.5);
             }
-            if (gamepad1.bWasReleased()) {
+            if (gamepad1.dpadUpWasReleased()) {
                 robot.setTransferIntake(0);
             }
-            if (gamepad1.a) {
+            if (gamepad1.dpadDownWasPressed()) {
                 robot.setTransferIntake(-0.5);
             }
-            if (gamepad1.aWasReleased()) {
+            if (gamepad1.dpadDownWasReleased()) {
                 robot.setTransferIntake(0);
             }
-            //Testing servos
-            if (gamepad1.dpad_up){
-                pollenPosition=pollenPosition+0.1;
-                sleep(1000);
-            }
-            if(gamepad1.dpad_down){
-                pollenPosition = pollenPosition-0.1;
-                sleep(1000);
-            }
-            robot.setPollenGate(pollenPosition);
-            if (gamepad1.dpad_left){
-                nectarPosition=nectarPosition+0.1;
-                sleep(1000);
-            }
-            if(gamepad1.dpad_right){
-                nectarPosition = nectarPosition-0.1;
-                sleep(1000);
-            }
-            robot.setNectarGate(nectarPosition);
-
-            telemetry.addLine("Nectar Gate Position: " + nectarPosition);
-            telemetry.addLine("Pollen Gate Position: " + pollenPosition);
-            telemetry.update();
         }
     }
 }

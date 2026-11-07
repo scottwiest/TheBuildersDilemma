@@ -8,7 +8,9 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
+
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -108,6 +110,7 @@ public class Robot {
         pollenLauncher.setMode(RunMode.RUN_USING_ENCODER);
         nectarLauncher.setMode(RunMode.RUN_USING_ENCODER);
     }
+
     // Helper methods keep OpModes clean
     public void setDrivePower(double forward, double right, double rotate) {
 
@@ -138,6 +141,7 @@ public class Robot {
         backLeftWheel.setPower(backLeftPower * scalingFactor);
         backRightWheel.setPower(backRightPower * scalingFactor);
     }
+
     public void runDriveInstructions(
             double speed,
             double leftInches,
@@ -206,19 +210,20 @@ public class Robot {
             opMode.sleep(100);   // pause after each move.
         }
     }
-        public void leftStrafe() {
-            frontRightWheel.setPower(1);
-            frontLeftWheel.setPower(-1);
-            backRightWheel.setPower(-1);
-            backLeftWheel.setPower(1);
-        }
 
-        public void rightStrafe() {
-            frontRightWheel.setPower(-1);
-            frontLeftWheel.setPower(1);
-            backRightWheel.setPower(1);
-            backLeftWheel.setPower(-1);
-        }
+    public void leftStrafe() {
+        frontRightWheel.setPower(1);
+        frontLeftWheel.setPower(-1);
+        backRightWheel.setPower(-1);
+        backLeftWheel.setPower(1);
+    }
+
+    public void rightStrafe() {
+        frontRightWheel.setPower(-1);
+        frontLeftWheel.setPower(1);
+        backRightWheel.setPower(1);
+        backLeftWheel.setPower(-1);
+    }
 
 
     public void setPollenLauncher(double power) {
@@ -228,49 +233,54 @@ public class Robot {
     public void setNectarLauncher(double power) {
         nectarLauncher.setPower(power);
     }
+
     public void setTransferIntake(double power) {
         transferIntake.setPower(power);
     }
-    public void nectarGateOpen() {
-        // 0.5 is equal to 90 degrees
-        nectarGate.setPosition(0.3);
-    }
 
     public void pollenGateOpen() {
-        // 0.22 is equal to 40 degrees
         pollenGate.setPosition(0);
     }
 
     public void pollenGateClose() {
-        pollenGate.setPosition(0.2);
+        pollenGate.setPosition(0.11);
+    }
+
+    public void nectarGateOpen() {
+        nectarGate.setPosition(0.1);
     }
 
     public void nectarGateClose() {
-        nectarGate.setPosition (0.1);
+        nectarGate.setPosition(0.0);
     }
 
-    public void setPollenGate(double position){ 
+    public void setNectarGatePosition(double position) {
+        nectarGate.setPosition(position);
+    }
+
+    public void setPollenGatePosition(double position) {
         pollenGate.setPosition(position);
     }
-    public void setNectarGate(double position){
-        nectarGate.setPosition(position);
+
+    public void logGatesPosition() {
+        opMode.telemetry.addData("Pollen Gate Position: ", pollenGate.getPosition());
+        opMode.telemetry.addData("Nectar Gate Position: ", nectarGate.getPosition());
+        opMode.telemetry.update();
     }
 
     public void setRelativeDrive(
             double forward,
             double right,
-            double rotate,
-            boolean resetRotation,
-            boolean robotView
+            double rotate
     ) {
         // If you press the A button, then you reset the Yaw to be zero from the way
         // the robot is currently pointing
-        if (resetRotation) {
+        if (opMode.gamepad1.aWasPressed()) {
             imu.resetYaw();
         }
         // If you press the left bumper, you get a drive from the point of view of the robot
         // (much like driving an RC vehicle)
-        if (robotView) {
+        if (opMode.gamepad1.b) {
             setDrivePower(forward, right, rotate);
         } else {
             driveFieldRelative(forward, right, rotate);
