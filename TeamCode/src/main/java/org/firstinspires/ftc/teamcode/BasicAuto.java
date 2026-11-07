@@ -1,13 +1,13 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 @Autonomous(name="Autonomous", group="Robot")
 
-public class BasicAuto extends LinearOpMode{
-
+public class BasicAuto extends LinearOpMode {
     Robot robot = new Robot(this);
 
     @Override
@@ -19,31 +19,24 @@ public class BasicAuto extends LinearOpMode{
 
         waitForStart();
 
-        while(opModeIsActive()){
+        while (opModeIsActive()) {
+            robot.runDriveInstructions(0.5, 20, 20, 20);
 
-            //Run to launching positions
-            robot.runDriveInstructions(0,0,0,0);
+            sleep(500);
 
-            //Launch pollen
-            launchPollen();
+            robot.setPollenLauncher(0.5);
+            robot.setNectarLauncher(0.5);
+            robot.setTransferIntake(0.5);
+            robot.nectarGateOpen();
+            robot.pollenGateOpen();
 
-            //Run to parking position
-            robot.runDriveInstructions(0,0,0,0);
+            sleep(5000);
+
+            robot.setPollenLauncher(0);
+            robot.setNectarLauncher(0);
+            robot.setTransferIntake(0);
+            robot.nectarGateClose();
+            robot.pollenGateClose();
         }
-    }
-
-    public void launchPollen(power){
-        robot.setPollenLauncherPower(power);
-        robot.pollenGateOpen();
-        sleep(500);
-        robot.pollenGateClose();
-        robot.setPollenLauncherPower(0);
-    }
-     public void launchNectar(power){
-        robot.setNectarLauncher(power);
-        robot.nectarGateOpen();
-        sleep(500);
-        robot.nectarGateClose();
-        robot.setNectarLauncher(0);
     }
 }

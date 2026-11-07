@@ -56,10 +56,10 @@ public class TeleOpTbd extends LinearOpMode {
 
             // Launcher control
             if (gamepad1.left_bumper) {
-                robot.setPollenLauncherPower(0.5);
+                robot.setPollenLauncher(0.02);
             }
             if (gamepad1.leftBumperWasReleased()) {
-                robot.setPollenLauncherPower(0);
+                robot.setPollenLauncher(0);
             }
             if (gamepad1.right_bumper) {
                 robot.setNectarLauncher(0.5);
@@ -70,20 +70,32 @@ public class TeleOpTbd extends LinearOpMode {
             if (gamepad1.b) {
                 robot.setTransferIntake(0.5);
             }
-
+            if (gamepad1.bWasReleased()) {
+                robot.setTransferIntake(0);
+            }
+            if (gamepad1.a) {
+                robot.setTransferIntake(-0.5);
+            }
+            if (gamepad1.aWasReleased()) {
+                robot.setTransferIntake(0);
+            }
             //Testing servos
             if (gamepad1.dpad_up){
                 pollenPosition=pollenPosition+0.1;
+                sleep(1000);
             }
             if(gamepad1.dpad_down){
                 pollenPosition = pollenPosition-0.1;
+                sleep(1000);
             }
             robot.setPollenGate(pollenPosition);
             if (gamepad1.dpad_left){
                 nectarPosition=nectarPosition+0.1;
+                sleep(1000);
             }
             if(gamepad1.dpad_right){
                 nectarPosition = nectarPosition-0.1;
+                sleep(1000);
             }
             robot.setNectarGate(nectarPosition);
 

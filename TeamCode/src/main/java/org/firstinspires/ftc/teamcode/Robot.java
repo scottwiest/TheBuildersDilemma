@@ -45,7 +45,7 @@ public class Robot {
         frontRightWheel = hardwareMap.get(DcMotor.class, "front_right_wheel");
         backRightWheel = hardwareMap.get(DcMotor.class, "back_right_wheel");
         pollenLauncher = hardwareMap.get(DcMotorEx.class, "pollen_launcher");
-        pollenLauncher = hardwareMap.get(DcMotorEx.class, "nectar_launcher");
+        nectarLauncher = hardwareMap.get(DcMotorEx.class, "nectar_launcher");
         transferIntake = hardwareMap.get(DcMotor.class, "transfer_intake");
         nectarGate = hardwareMap.get(Servo.class, "nectar_gate");
         pollenGate = hardwareMap.get(Servo.class, "pollen_gate");
@@ -55,9 +55,9 @@ public class Robot {
         backLeftWheel.setDirection(DcMotor.Direction.FORWARD);
         frontRightWheel.setDirection(DcMotor.Direction.REVERSE);
         backRightWheel.setDirection(DcMotor.Direction.REVERSE);
-        pollenLauncher.setDirection(DcMotorEx.Direction.REVERSE);
-        nectarLauncher.setDirection(DcMotorEx.Direction.FORWARD);
-        transferIntake.setDirection(DcMotorSimple.Direction.FORWARD);
+        pollenLauncher.setDirection(DcMotorEx.Direction.FORWARD);
+        nectarLauncher.setDirection(DcMotorEx.Direction.REVERSE);
+        transferIntake.setDirection(DcMotorSimple.Direction.REVERSE);
 
         // Set zero-power behavior
         frontLeftWheel.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -221,32 +221,32 @@ public class Robot {
         }
 
 
-    public void setPollenLauncherPower(double power) {
+    public void setPollenLauncher(double power) {
         pollenLauncher.setPower(power);
     }
 
     public void setNectarLauncher(double power) {
-        pollenLauncher.setPower(power);
+        nectarLauncher.setPower(power);
     }
     public void setTransferIntake(double power) {
         transferIntake.setPower(power);
     }
     public void nectarGateOpen() {
         // 0.5 is equal to 90 degrees
-        nectarGate.setPosition(0);
+        nectarGate.setPosition(0.3);
     }
 
     public void pollenGateOpen() {
         // 0.22 is equal to 40 degrees
-        pollenGate.setPosition(0.22);
-    }
-
-    public void pollenGateClose() {
         pollenGate.setPosition(0);
     }
 
+    public void pollenGateClose() {
+        pollenGate.setPosition(0.2);
+    }
+
     public void nectarGateClose() {
-        nectarGate.setPosition (0.22);
+        nectarGate.setPosition (0.1);
     }
 
     public void setPollenGate(double position){ 
