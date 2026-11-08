@@ -77,6 +77,8 @@ public class TeleOpTbd extends LinearOpMode {
             if (gamepad1.dpadDownWasReleased()) {
                 robot.setTransferIntake(0);
             }
+
+            robot.logLauncherVelocity();
         }
     }
 }
