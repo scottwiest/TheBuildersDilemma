@@ -80,9 +80,9 @@ public class Robot {
 
         // Set motor directions (adjust according to your drivetrain orientation)
         frontLeftWheel.setDirection(DcMotor.Direction.FORWARD);
-        backLeftWheel.setDirection(DcMotor.Direction.FORWARD);
+        backLeftWheel.setDirection(DcMotor.Direction.REVERSE);
         frontRightWheel.setDirection(DcMotor.Direction.REVERSE);
-        backRightWheel.setDirection(DcMotor.Direction.REVERSE);
+        backRightWheel.setDirection(DcMotor.Direction.FORWARD);
         pollenLauncher.setDirection(DcMotorEx.Direction.FORWARD);
         nectarLauncher.setDirection(DcMotorEx.Direction.REVERSE);
         transferIntake.setDirection(DcMotorSimple.Direction.REVERSE);

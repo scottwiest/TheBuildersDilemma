@@ -24,14 +24,7 @@ public class TeleOpTbd extends LinearOpMode {
             double right = gamepad1.left_stick_x;
             double rotate = gamepad1.right_stick_x;
 
-            boolean relativeDriveFlag = true;
-
-            // Drive control
-            if (relativeDriveFlag) {
-                robot.setRelativeDrive(forward, right, rotate);
-            } else {
-                robot.setDrivePower(forward, right, rotate);
-            }
+            robot.setDrivePower(forward, right, rotate);
 
             // Pollen Servo control
             if (gamepad1.leftBumperWasPressed()) {
