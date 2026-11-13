@@ -20,18 +20,14 @@ public class BasicAuto extends LinearOpMode {
 
         sleep(500);
 
-        robot.setPollenLauncher(0.5);
-        robot.setNectarLauncher(0.5);
+        robot.startPollenLauncher(0.5);
+        robot.startNectarLauncher(0.5);
         robot.setTransferIntake(0.5);
-        robot.nectarGateOpen();
-        robot.pollenGateOpen();
 
-        sleep(5000);
+        robot.runLaunchersForSeconds(5.0);
 
-        robot.setPollenLauncher(0);
-        robot.setNectarLauncher(0);
+        robot.stopPollenLauncher();
+        robot.stopNectarLauncher();
         robot.setTransferIntake(0);
-        robot.nectarGateClose();
-        robot.pollenGateClose();
     }
 }

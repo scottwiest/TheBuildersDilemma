@@ -27,12 +27,14 @@ public class Robot {
     private DcMotor transferIntake = null;
     private Servo nectarGate = null;
     private Servo pollenGate = null;
-    private LinearOpMode opMode;
+    private LauncherController pollenController = null;
+    private LauncherController nectarController = null;
+    private final LinearOpMode opMode;
     private IMU imu;
-    private ElapsedTime runtime = new ElapsedTime();
-    static final double COUNTS_PER_TIRE_REV = 537.7;
+    private final ElapsedTime runtime = new ElapsedTime();
+    static final double WHEEL_TICKS_PER_REV = 537.7;
     static final double WHEEL_DIAMETER_INCHES = 4.0;
-    static final double COUNTS_PER_INCH = (COUNTS_PER_TIRE_REV) / (WHEEL_DIAMETER_INCHES * 3.14159);
+    static final double WHEEL_COUNTS_PER_INCH = (WHEEL_TICKS_PER_REV) / (WHEEL_DIAMETER_INCHES * 3.14159);
 
     // GoBilda 5203 (6000 RPM, 1:1 ratio) Launcher Motor Constants
     public static final double LAUNCHER_TICKS_PER_REV = 28.0;
@@ -40,16 +42,12 @@ public class Robot {
     // Max ticks/sec = (6000 RPM / 60 sec) * 28 ticks/rev = 2800 ticks/sec
     public static final double LAUNCHER_MAX_TICKS_PER_SEC = (LAUNCHER_MAX_RPM / 60.0) * LAUNCHER_TICKS_PER_REV;
 
-    // Default target velocities (in ticks/sec) for Auto & TeleOp
-    public static final double DEFAULT_POLLEN_VELOCITY = 0.55 * LAUNCHER_MAX_TICKS_PER_SEC; // 1540 ticks/sec (3300 RPM)
-    public static final double DEFAULT_NECTAR_VELOCITY = 0.50 * LAUNCHER_MAX_TICKS_PER_SEC; // 1400 ticks/sec (3000 RPM)
-
     // REV Hub Velocity PIDF starting coefficients for GoBilda 5203 6000 RPM:
     // F = 32767 / max_ticks_per_sec = 32767 / 2800 ≈ 11.7025
     // P = 0.1 * F ≈ 1.17 (can be tuned higher, e.g., 5.0 - 12.0, for faster recovery between shots)
     // I = 0.1 * P ≈ 0.117 (set to 0.0 if flywheel overshoots after spin-up)
     // D = 0.0
-    public static final double LAUNCHER_F = 32767.0 / LAUNCHER_MAX_TICKS_PER_SEC;
+    public static final double LAUNCHER_F = Short.MAX_VALUE / LAUNCHER_MAX_TICKS_PER_SEC;
     public static final double LAUNCHER_P = 0.1 * LAUNCHER_F;
     public static final double LAUNCHER_I = 0.1 * LAUNCHER_P;
     public static final double LAUNCHER_D = 0.0;
@@ -58,6 +56,10 @@ public class Robot {
             new PIDFCoefficients(LAUNCHER_P, LAUNCHER_I, LAUNCHER_D, LAUNCHER_F);
     public static final PIDFCoefficients NECTAR_PIDF_COEFFS =
             new PIDFCoefficients(LAUNCHER_P, LAUNCHER_I, LAUNCHER_D, LAUNCHER_F);
+
+    // Gate velocity hysteresis thresholds (open at >= 95%, close if speed drops to <= 90%)
+    public static final double GATE_OPEN_THRESHOLD = 0.95;
+    public static final double GATE_CLOSE_THRESHOLD = 0.90;
 
     // Constructor
     public Robot(LinearOpMode opMode) {
@@ -106,6 +108,8 @@ public class Robot {
         backRightWheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         configureLaunchersPIDF();
+        pollenController = new LauncherController(pollenLauncher, this::pollenGateOpen, this::pollenGateClose);
+        nectarController = new LauncherController(nectarLauncher, this::nectarGateOpen, this::nectarGateClose);
 
         // Reset and stop motors
         frontLeftWheel.setPower(0);
@@ -118,9 +122,9 @@ public class Robot {
         imu = hardwareMap.get(IMU.class, "imu");
 
         RevHubOrientationOnRobot.LogoFacingDirection logoDirection =
-                RevHubOrientationOnRobot.LogoFacingDirection.UP;
+                RevHubOrientationOnRobot.LogoFacingDirection.FORWARD;
         RevHubOrientationOnRobot.UsbFacingDirection usbDirection =
-                RevHubOrientationOnRobot.UsbFacingDirection.FORWARD;
+                RevHubOrientationOnRobot.UsbFacingDirection.UP;
 
         RevHubOrientationOnRobot orientationOnRobot = new
                 RevHubOrientationOnRobot(logoDirection, usbDirection);
@@ -199,12 +203,12 @@ public class Robot {
 
             // Determine new target position, and pass to motor controller
             newLeftFrontTarget =
-                    frontLeftWheel.getCurrentPosition() + (int) (leftInches * COUNTS_PER_INCH);
+                    frontLeftWheel.getCurrentPosition() + (int) (leftInches * WHEEL_COUNTS_PER_INCH);
             newRightFrontTarget =
-                    frontRightWheel.getCurrentPosition() + (int) (rightInches * COUNTS_PER_INCH);
-            newLeftBackTarget = backLeftWheel.getCurrentPosition() + (int) (leftInches * COUNTS_PER_INCH);
+                    frontRightWheel.getCurrentPosition() + (int) (rightInches * WHEEL_COUNTS_PER_INCH);
+            newLeftBackTarget = backLeftWheel.getCurrentPosition() + (int) (leftInches * WHEEL_COUNTS_PER_INCH);
             newRightBackTarget =
-                    backRightWheel.getCurrentPosition() + (int) (rightInches * COUNTS_PER_INCH);
+                    backRightWheel.getCurrentPosition() + (int) (rightInches * WHEEL_COUNTS_PER_INCH);
             frontLeftWheel.setTargetPosition(newLeftFrontTarget);
             frontRightWheel.setTargetPosition(newRightFrontTarget);
             backLeftWheel.setTargetPosition(newLeftBackTarget);
@@ -330,10 +334,12 @@ public class Robot {
     }
 
     public void logLauncherVelocity() {
-        opMode.telemetry.addData("Pollen Velocity (ticks/s)", "%.1f (%.0f RPM)",
-                getPollenLauncherVelocity(), getPollenLauncherRPM());
-        opMode.telemetry.addData("Nectar Velocity (ticks/s)", "%.1f (%.0f RPM)",
-                getNectarLauncherVelocity(), getNectarLauncherRPM());
+        opMode.telemetry.addData("Pollen Launcher", "%.1f ticks/s (%.0f RPM) | Gate: %s",
+                getPollenLauncherVelocity(), getPollenLauncherRPM(),
+                pollenController.isGateOpen() ? "OPEN" : "CLOSED");
+        opMode.telemetry.addData("Nectar Launcher", "%.1f ticks/s (%.0f RPM) | Gate: %s",
+                getNectarLauncherVelocity(), getNectarLauncherRPM(),
+                nectarController.isGateOpen() ? "OPEN" : "CLOSED");
         opMode.telemetry.update();
     }
 
@@ -350,25 +356,103 @@ public class Robot {
     }
 
     public void nectarGateOpen() {
-        nectarGate.setPosition(0.1);
+        nectarGate.setPosition(0.12);
     }
 
     public void nectarGateClose() {
         nectarGate.setPosition(0.0);
     }
 
-    public void setNectarGatePosition(double position) {
-        nectarGate.setPosition(position);
+    /**
+     * Manages non-blocking velocity spin-up and 95%-open / 90%-close gate hysteresis for a launcher.
+     */
+    private static class LauncherController {
+        private final DcMotorEx motor;
+        private final Runnable openGate;
+        private final Runnable closeGate;
+        private double targetPower = 0.0;
+        private boolean gateOpen = false;
+
+        LauncherController(DcMotorEx motor, Runnable openGate, Runnable closeGate) {
+            this.motor = motor;
+            this.openGate = openGate;
+            this.closeGate = closeGate;
+        }
+
+        void start(double power) {
+            if (power == 0.0) {
+                stop();
+                return;
+            }
+            targetPower = power;
+            if (!gateOpen) {
+                closeGate.run();
+            }
+            motor.setVelocity(power * LAUNCHER_MAX_TICKS_PER_SEC);
+        }
+
+        void stop() {
+            targetPower = 0.0;
+            gateOpen = false;
+            closeGate.run();
+            motor.setVelocity(0);
+        }
+
+        void update() {
+            if (targetPower == 0.0) {
+                return;
+            }
+            double targetVel = Math.abs(targetPower * LAUNCHER_MAX_TICKS_PER_SEC);
+            double currentVel = Math.abs(motor.getVelocity());
+
+            if (!gateOpen && currentVel >= targetVel * GATE_OPEN_THRESHOLD) {
+                openGate.run();
+                gateOpen = true;
+            } else if (gateOpen && currentVel <= targetVel * GATE_CLOSE_THRESHOLD) {
+                closeGate.run();
+                gateOpen = false;
+            }
+        }
+
+        boolean isGateOpen() {
+            return gateOpen;
+        }
     }
 
-    public void setPollenGatePosition(double position) {
-        pollenGate.setPosition(position);
+    public void startPollenLauncher(double power) {
+        pollenController.start(power);
     }
 
-    public void logGatesPosition() {
-        opMode.telemetry.addData("Pollen Gate Position: ", pollenGate.getPosition());
-        opMode.telemetry.addData("Nectar Gate Position: ", nectarGate.getPosition());
-        opMode.telemetry.update();
+    public void stopPollenLauncher() {
+        pollenController.stop();
+    }
+
+    public void startNectarLauncher(double power) {
+        nectarController.start(power);
+    }
+
+    public void stopNectarLauncher() {
+        nectarController.stop();
+    }
+
+    /**
+     * Call every loop in TeleOp (or Auto) to automatically open launcher gates at >= 95% target
+     * velocity and close them if velocity drops to <= 90%.
+     */
+    public void updateLaunchers() {
+        pollenController.update();
+        nectarController.update();
+    }
+
+    /**
+     * Helper for Autonomous: maintains 95%/90% gated launching for the given duration in seconds.
+     */
+    public void runLaunchersForSeconds(double durationSeconds) {
+        ElapsedTime timer = new ElapsedTime();
+        while (opMode.opModeIsActive() && timer.seconds() < durationSeconds) {
+            updateLaunchers();
+            opMode.sleep(10);
+        }
     }
 
     public void setRelativeDrive(
@@ -381,7 +465,7 @@ public class Robot {
         if (opMode.gamepad1.aWasPressed()) {
             imu.resetYaw();
         }
-        // If you press the left bumper, you get a drive from the point of view of the robot
+        // If you press the B button, you get a drive from the point of view of the robot
         // (much like driving an RC vehicle)
         if (opMode.gamepad1.b) {
             setDrivePower(forward, right, rotate);
