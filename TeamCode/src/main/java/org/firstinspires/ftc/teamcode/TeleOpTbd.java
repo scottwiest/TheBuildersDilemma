@@ -55,16 +55,16 @@ public class TeleOpTbd extends LinearOpMode {
             }
 
 
-            if (gamepad1.dpadUpWasPressed()) {
+            if (gamepad1.aWasPressed()) {
                 robot.setTransferIntake(1);
             }
-            if (gamepad1.dpadUpWasReleased()) {
+            if (gamepad1.aWasReleased()) {
                 robot.setTransferIntake(0);
             }
-            if (gamepad1.dpadDownWasPressed()) {
+            if (gamepad1.bWasPressed()) {
                 robot.setTransferIntake(-1);
             }
-            if (gamepad1.dpadDownWasReleased()) {
+            if (gamepad1.bWasReleased()) {
                 robot.setTransferIntake(0);
             }
 
