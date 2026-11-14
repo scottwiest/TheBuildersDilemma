@@ -6,7 +6,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 @TeleOp(name = "TeleOp")
 public class TeleOpTbd extends LinearOpMode {
 
-    Robot robot = new Robot(this);
+    private final Robot robot = new Robot(this);
 
     @Override
     public void runOpMode() {

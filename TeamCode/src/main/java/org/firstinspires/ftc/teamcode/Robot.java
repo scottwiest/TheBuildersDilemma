@@ -20,6 +20,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 
 @Config
+@SuppressWarnings("unused")
 public class Robot {
     // Declare hardware members
     private DcMotor frontLeftWheel = null;
@@ -75,7 +76,6 @@ public class Robot {
     public static double GATE_OPEN_THRESHOLD = 0.99;
     public static double GATE_CLOSE_THRESHOLD = 0.975;
     public static double GATE_MIN_CLOSE_SECONDS = 0.20;
-    public static long FINAL_SHOT_CLEAR_MS = 250;
     public static long POST_MOVE_PAUSE_MS = 100;
 
     // Track last applied PIDF values so live FTC Dashboard edits push to the REV Hub automatically
@@ -109,12 +109,12 @@ public class Robot {
         pollenGate = hardwareMap.get(Servo.class, "pollen_gate");
 
         // Set motor directions (adjust according to your drivetrain orientation)
-        frontLeftWheel.setDirection(DcMotor.Direction.FORWARD);
-        backLeftWheel.setDirection(DcMotor.Direction.REVERSE);
-        frontRightWheel.setDirection(DcMotor.Direction.REVERSE);
-        backRightWheel.setDirection(DcMotor.Direction.FORWARD);
-        pollenLauncher.setDirection(DcMotorEx.Direction.FORWARD);
-        nectarLauncher.setDirection(DcMotorEx.Direction.REVERSE);
+        frontLeftWheel.setDirection(DcMotorSimple.Direction.FORWARD);
+        backLeftWheel.setDirection(DcMotorSimple.Direction.REVERSE);
+        frontRightWheel.setDirection(DcMotorSimple.Direction.REVERSE);
+        backRightWheel.setDirection(DcMotorSimple.Direction.FORWARD);
+        pollenLauncher.setDirection(DcMotorSimple.Direction.FORWARD);
+        nectarLauncher.setDirection(DcMotorSimple.Direction.REVERSE);
         transferIntake.setDirection(DcMotorSimple.Direction.REVERSE);
 
         // Set zero-power behavior
@@ -125,15 +125,15 @@ public class Robot {
         pollenLauncher.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         nectarLauncher.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
-        frontRightWheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        backRightWheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        frontLeftWheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        backLeftWheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        frontRightWheel.setMode(RunMode.STOP_AND_RESET_ENCODER);
+        backRightWheel.setMode(RunMode.STOP_AND_RESET_ENCODER);
+        frontLeftWheel.setMode(RunMode.STOP_AND_RESET_ENCODER);
+        backLeftWheel.setMode(RunMode.STOP_AND_RESET_ENCODER);
 
-        frontLeftWheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        backLeftWheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        frontRightWheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        backRightWheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        frontLeftWheel.setMode(RunMode.RUN_USING_ENCODER);
+        backLeftWheel.setMode(RunMode.RUN_USING_ENCODER);
+        frontRightWheel.setMode(RunMode.RUN_USING_ENCODER);
+        backRightWheel.setMode(RunMode.RUN_USING_ENCODER);
 
         configureLaunchersPIDF();
         pollenController = new LauncherController(pollenLauncher, this::pollenGateOpen, this::pollenGateClose);

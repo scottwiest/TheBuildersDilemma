@@ -20,8 +20,10 @@ android {
     namespace = 'org.firstinspires.ftc.teamcode'
     compileSdk = 37
 
-    packagingOptions {
-        jniLibs.useLegacyPackaging true
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
     }
 }
 

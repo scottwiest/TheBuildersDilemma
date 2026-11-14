@@ -18,7 +18,7 @@ public class FullAuto extends LinearOpMode {
     public static long GATE_OPEN_MS = 300;
     public static long GATE_CLOSED_MS = 600;
 
-    Robot robot = new Robot(this);
+    private final Robot robot = new Robot(this);
 
     @Override
     public void runOpMode() {

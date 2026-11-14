@@ -14,7 +14,7 @@ public class DummyAuto extends LinearOpMode {
     public static double DRIVE_TIMEOUT_S = 5.0;
     public static double STRAFE_TIMEOUT_S = 5.0;
 
-    Robot robot = new Robot(this);
+    private final Robot robot = new Robot(this);
 
     @Override
     public void runOpMode() {
