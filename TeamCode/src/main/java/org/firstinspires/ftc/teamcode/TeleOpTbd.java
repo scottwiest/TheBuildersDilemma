@@ -34,7 +34,7 @@ public class TeleOpTbd extends LinearOpMode {
             }
             // Pollen Launcher control
             if (gamepad1.leftTriggerWasPressed()) {
-                robot.setPollenLauncher(0.2);
+                robot.setPollenLauncher(0.4);
             }
             if (gamepad1.leftTriggerWasReleased()) {
                 robot.setPollenLauncher(0);
@@ -48,7 +48,7 @@ public class TeleOpTbd extends LinearOpMode {
             }
             // Nectar Launcher Control
             if (gamepad1.rightTriggerWasPressed()) {
-                robot.setNectarLauncher(0.5);
+                robot.setNectarLauncher(0.4);
             }
             if (gamepad1.rightTriggerWasReleased()) {
                 robot.setNectarLauncher(0);
