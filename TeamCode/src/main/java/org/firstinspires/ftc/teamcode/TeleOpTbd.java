@@ -30,7 +30,7 @@ public class TeleOpTbd extends LinearOpMode {
             // Left trigger starts spin-up (opens gate at >=98%, closes at <=96%);
             // Left bumper closes gate and stops launcher.
             if (gamepad1.leftTriggerWasPressed()) {
-                robot.startPollenLauncher(0.405);
+                robot.startPollenLauncher(Robot.POLLEN_LAUNCHER_POWER);
             }
             if (gamepad1.leftBumperWasPressed()) {
                 robot.stopPollenLauncher();
@@ -40,7 +40,7 @@ public class TeleOpTbd extends LinearOpMode {
             // Right trigger starts spin-up (opens gate at >=98%, closes at <=96%);
             // Right bumper closes gate and stops launcher.
             if (gamepad1.rightTriggerWasPressed()) {
-                robot.startNectarLauncher(0.42);
+                robot.startNectarLauncher(Robot.NECTAR_LAUNCHER_POWER);
             }
             if (gamepad1.rightBumperWasPressed()) {
                 robot.stopNectarLauncher();
@@ -50,13 +50,13 @@ public class TeleOpTbd extends LinearOpMode {
 
 
             if (gamepad1.aWasPressed()) {
-                robot.setTransferIntake(1);
+                robot.setTransferIntake(Robot.INTAKE_POWER);
             }
             if (gamepad1.aWasReleased()) {
                 robot.setTransferIntake(0);
             }
             if (gamepad1.bWasPressed()) {
-                robot.setTransferIntake(-1);
+                robot.setTransferIntake(Robot.INTAKE_REVERSE_POWER);
             }
             if (gamepad1.bWasReleased()) {
                 robot.setTransferIntake(0);
