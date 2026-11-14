@@ -27,22 +27,22 @@ public class TeleOpTbd extends LinearOpMode {
             robot.setDrivePower(forward, right, rotate);
 
             // Pollen Launcher & Gate Control:
-            // Left bumper starts spin-up (opens gate at >=95%, closes at <=90%);
-            // Left trigger closes gate and stops launcher.
-            if (gamepad1.leftBumperWasPressed()) {
-                robot.startPollenLauncher(0.5);
-            }
+            // Left trigger starts spin-up (opens gate at >=98%, closes at <=96%);
+            // Left bumper closes gate and stops launcher.
             if (gamepad1.leftTriggerWasPressed()) {
+                robot.startPollenLauncher(0.405);
+            }
+            if (gamepad1.leftBumperWasPressed()) {
                 robot.stopPollenLauncher();
             }
 
             // Nectar Launcher & Gate Control:
-            // Right bumper starts spin-up (opens gate at >=95%, closes at <=90%);
-            // Right trigger closes gate and stops launcher.
-            if (gamepad1.rightBumperWasPressed()) {
-                robot.startNectarLauncher(0.5);
-            }
+            // Right trigger starts spin-up (opens gate at >=98%, closes at <=96%);
+            // Right bumper closes gate and stops launcher.
             if (gamepad1.rightTriggerWasPressed()) {
+                robot.startNectarLauncher(0.42);
+            }
+            if (gamepad1.rightBumperWasPressed()) {
                 robot.stopNectarLauncher();
             }
 

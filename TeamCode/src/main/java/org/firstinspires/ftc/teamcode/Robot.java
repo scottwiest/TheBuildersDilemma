@@ -35,6 +35,8 @@ public class Robot {
     static final double WHEEL_TICKS_PER_REV = 537.7;
     static final double WHEEL_DIAMETER_INCHES = 4.0;
     static final double WHEEL_COUNTS_PER_INCH = (WHEEL_TICKS_PER_REV) / (WHEEL_DIAMETER_INCHES * 3.14159);
+    // Mecanum rollers sit at 45° and slip slightly sideways (~1.1 wheel inches per field inch)
+    static final double STRAFE_MULTIPLIER = 1.2;
 
     // GoBilda 5203 (6000 RPM, 1:1 ratio) Launcher Motor Constants
     public static final double LAUNCHER_TICKS_PER_REV = 28.0;
@@ -42,14 +44,14 @@ public class Robot {
     // Max ticks/sec = (6000 RPM / 60 sec) * 28 ticks/rev = 2800 ticks/sec
     public static final double LAUNCHER_MAX_TICKS_PER_SEC = (LAUNCHER_MAX_RPM / 60.0) * LAUNCHER_TICKS_PER_REV;
 
-    // REV Hub Velocity PIDF starting coefficients for GoBilda 5203 6000 RPM:
-    // F = 32767 / max_ticks_per_sec = 32767 / 2800 ≈ 11.7025
-    // P = 0.1 * F ≈ 1.17 (can be tuned higher, e.g., 5.0 - 12.0, for faster recovery between shots)
-    // I = 0.1 * P ≈ 0.117 (set to 0.0 if flywheel overshoots after spin-up)
-    // D = 0.0
+    // REV Hub Velocity PIDF coefficients for GoBilda 5203 6000 RPM flywheel:
+    // F = 32767 / max_ticks_per_sec ≈ 11.70 (increase slightly, e.g. 12.5, if steady RPM sits below target)
+    // P = 60.0 (strong recovery boost when a ball drops wheel speed; tune between 40.0 and 100.0)
+    // I = 0.0  (kept at 0 so spin-up doesn't overshoot and launch the 1st ball higher than the rest)
+    // D = 0.0  (kept at 0 to avoid amplifying 28-tick encoder noise)
     public static final double LAUNCHER_F = Short.MAX_VALUE / LAUNCHER_MAX_TICKS_PER_SEC;
-    public static final double LAUNCHER_P = 0.1 * LAUNCHER_F;
-    public static final double LAUNCHER_I = 0.1 * LAUNCHER_P;
+    public static final double LAUNCHER_P = 6.0;
+    public static final double LAUNCHER_I = 0.1;
     public static final double LAUNCHER_D = 0.0;
 
     public static final PIDFCoefficients POLLEN_PIDF_COEFFS =
@@ -57,9 +59,10 @@ public class Robot {
     public static final PIDFCoefficients NECTAR_PIDF_COEFFS =
             new PIDFCoefficients(LAUNCHER_P, LAUNCHER_I, LAUNCHER_D, LAUNCHER_F);
 
-    // Gate velocity hysteresis thresholds (open at >= 95%, close if speed drops to <= 90%)
-    public static final double GATE_OPEN_THRESHOLD = 0.95;
-    public static final double GATE_CLOSE_THRESHOLD = 0.90;
+    // Gate velocity hysteresis thresholds & minimum close hold time between multi-ball shots
+    public static final double GATE_OPEN_THRESHOLD = 0.99;
+    public static final double GATE_CLOSE_THRESHOLD = 0.975;
+    public static final double GATE_MIN_CLOSE_SECONDS = 0.20;
 
     // Constructor
     public Robot(LinearOpMode opMode) {
@@ -187,10 +190,39 @@ public class Robot {
         backRightWheel.setPower(backRightPower * scalingFactor);
     }
 
+    /**
+     * Drives forward/backward or turns in place using encoder targets for left and right sides.
+     */
     public void runDriveInstructions(
-            double speed,
+            double power,
             double leftInches,
             double rightInches,
+            double timeoutS
+    ) {
+        runDriveInstructions(power, leftInches, rightInches, leftInches, rightInches, timeoutS);
+    }
+
+    /**
+     * Strafes sideways using encoders: positive rightInches strafes RIGHT, negative strafes LEFT.
+     */
+    public void runStrafeInstructions(
+            double power,
+            double rightInches,
+            double timeoutS
+    ) {
+        double d = rightInches * STRAFE_MULTIPLIER;
+        runDriveInstructions(power, d, -d, -d, d, timeoutS);
+    }
+
+    /**
+     * Moves all four wheels to individual encoder distance targets (in inches).
+     */
+    private void runDriveInstructions(
+            double power,
+            double frontLeftInches,
+            double frontRightInches,
+            double backLeftInches,
+            double backRightInches,
             double timeoutS
     ) {
         int newLeftFrontTarget;
@@ -203,12 +235,13 @@ public class Robot {
 
             // Determine new target position, and pass to motor controller
             newLeftFrontTarget =
-                    frontLeftWheel.getCurrentPosition() + (int) (leftInches * WHEEL_COUNTS_PER_INCH);
+                    frontLeftWheel.getCurrentPosition() + (int) (frontLeftInches * WHEEL_COUNTS_PER_INCH);
             newRightFrontTarget =
-                    frontRightWheel.getCurrentPosition() + (int) (rightInches * WHEEL_COUNTS_PER_INCH);
-            newLeftBackTarget = backLeftWheel.getCurrentPosition() + (int) (leftInches * WHEEL_COUNTS_PER_INCH);
+                    frontRightWheel.getCurrentPosition() + (int) (frontRightInches * WHEEL_COUNTS_PER_INCH);
+            newLeftBackTarget =
+                    backLeftWheel.getCurrentPosition() + (int) (backLeftInches * WHEEL_COUNTS_PER_INCH);
             newRightBackTarget =
-                    backRightWheel.getCurrentPosition() + (int) (rightInches * WHEEL_COUNTS_PER_INCH);
+                    backRightWheel.getCurrentPosition() + (int) (backRightInches * WHEEL_COUNTS_PER_INCH);
             frontLeftWheel.setTargetPosition(newLeftFrontTarget);
             frontRightWheel.setTargetPosition(newRightFrontTarget);
             backLeftWheel.setTargetPosition(newLeftBackTarget);
@@ -222,10 +255,10 @@ public class Robot {
 
             // reset the timeout time and start motion.
             runtime.reset();
-            frontLeftWheel.setPower(Math.abs(speed));
-            frontRightWheel.setPower(Math.abs(speed));
-            backLeftWheel.setPower(Math.abs(speed));
-            backRightWheel.setPower(Math.abs(speed));
+            frontLeftWheel.setPower(Math.abs(power));
+            frontRightWheel.setPower(Math.abs(power));
+            backLeftWheel.setPower(Math.abs(power));
+            backRightWheel.setPower(Math.abs(power));
 
             // keep looping while we are still active, and there is time left, and both motors are running.
             // Note: We use (isBusy() && isBusy()) in the loop test, which means that when EITHER motor hits
@@ -256,21 +289,6 @@ public class Robot {
         }
     }
 
-    public void leftStrafe() {
-        frontRightWheel.setPower(1);
-        frontLeftWheel.setPower(-1);
-        backRightWheel.setPower(-1);
-        backLeftWheel.setPower(1);
-    }
-
-    public void rightStrafe() {
-        frontRightWheel.setPower(-1);
-        frontLeftWheel.setPower(1);
-        backRightWheel.setPower(1);
-        backLeftWheel.setPower(-1);
-    }
-
-
     /**
      * Sets the pollen launcher speed as a fraction of max velocity (-1.0 to 1.0)
      * using built-in DcMotorEx PIDF velocity control.
@@ -280,41 +298,11 @@ public class Robot {
     }
 
     /**
-     * Sets the pollen launcher target velocity directly in encoder ticks per second.
-     */
-    public void setPollenLauncherVelocity(double ticksPerSec) {
-        pollenLauncher.setVelocity(ticksPerSec);
-    }
-
-    /**
-     * Sets the pollen launcher target speed in RPM (up to 6000 RPM for GoBilda 5203).
-     */
-    public void setPollenLauncherRPM(double rpm) {
-        double ticksPerSec = (rpm / 60.0) * LAUNCHER_TICKS_PER_REV;
-        pollenLauncher.setVelocity(ticksPerSec);
-    }
-
-    /**
      * Sets the nectar launcher speed as a fraction of max velocity (-1.0 to 1.0)
      * using built-in DcMotorEx PIDF velocity control.
      */
     public void setNectarLauncher(double power) {
         nectarLauncher.setVelocity(power * LAUNCHER_MAX_TICKS_PER_SEC);
-    }
-
-    /**
-     * Sets the nectar launcher target velocity directly in encoder ticks per second.
-     */
-    public void setNectarLauncherVelocity(double ticksPerSec) {
-        nectarLauncher.setVelocity(ticksPerSec);
-    }
-
-    /**
-     * Sets the nectar launcher target speed in RPM (up to 6000 RPM for GoBilda 5203).
-     */
-    public void setNectarLauncherRPM(double rpm) {
-        double ticksPerSec = (rpm / 60.0) * LAUNCHER_TICKS_PER_REV;
-        nectarLauncher.setVelocity(ticksPerSec);
     }
 
     public double getPollenLauncherVelocity() {
@@ -334,12 +322,14 @@ public class Robot {
     }
 
     public void logLauncherVelocity() {
-        opMode.telemetry.addData("Pollen Launcher", "%.1f ticks/s (%.0f RPM) | Gate: %s",
+        opMode.telemetry.addData("Pollen Launcher", "%.1f ticks/s (%.0f RPM) | Gate: %s | Shots: %d",
                 getPollenLauncherVelocity(), getPollenLauncherRPM(),
-                pollenController.isGateOpen() ? "OPEN" : "CLOSED");
-        opMode.telemetry.addData("Nectar Launcher", "%.1f ticks/s (%.0f RPM) | Gate: %s",
+                pollenController.isGateOpen() ? "OPEN" : "CLOSED",
+                pollenController.getShotCount());
+        opMode.telemetry.addData("Nectar Launcher", "%.1f ticks/s (%.0f RPM) | Gate: %s | Shots: %d",
                 getNectarLauncherVelocity(), getNectarLauncherRPM(),
-                nectarController.isGateOpen() ? "OPEN" : "CLOSED");
+                nectarController.isGateOpen() ? "OPEN" : "CLOSED",
+                nectarController.getShotCount());
         opMode.telemetry.update();
     }
 
@@ -363,15 +353,23 @@ public class Robot {
         nectarGate.setPosition(0.0);
     }
 
+    public boolean isPollenGateOpen() {
+        return pollenController.isGateOpen();
+    }
+
     /**
-     * Manages non-blocking velocity spin-up and 95%-open / 90%-close gate hysteresis for a launcher.
+     * Manages non-blocking velocity spin-up, 98%-open / 96%-close gate hysteresis,
+     * and a 200ms gate-close hold time so back-to-back balls feed one at a time.
      */
     private static class LauncherController {
         private final DcMotorEx motor;
         private final Runnable openGate;
         private final Runnable closeGate;
+        private final ElapsedTime closeHoldTimer = new ElapsedTime();
         private double targetPower = 0.0;
         private boolean gateOpen = false;
+        private boolean holdingGateClosed = false;
+        private int shotCount = 0;
 
         LauncherController(DcMotorEx motor, Runnable openGate, Runnable closeGate) {
             this.motor = motor;
@@ -384,7 +382,12 @@ public class Robot {
                 stop();
                 return;
             }
+            if (targetPower == power) {
+                return;
+            }
             targetPower = power;
+            holdingGateClosed = false;
+            shotCount = 0;
             if (!gateOpen) {
                 closeGate.run();
             }
@@ -394,6 +397,7 @@ public class Robot {
         void stop() {
             targetPower = 0.0;
             gateOpen = false;
+            holdingGateClosed = false;
             closeGate.run();
             motor.setVelocity(0);
         }
@@ -402,20 +406,31 @@ public class Robot {
             if (targetPower == 0.0) {
                 return;
             }
+            if (holdingGateClosed && closeHoldTimer.seconds() >= GATE_MIN_CLOSE_SECONDS) {
+                holdingGateClosed = false;
+            }
+
             double targetVel = Math.abs(targetPower * LAUNCHER_MAX_TICKS_PER_SEC);
             double currentVel = Math.abs(motor.getVelocity());
 
-            if (!gateOpen && currentVel >= targetVel * GATE_OPEN_THRESHOLD) {
+            if (!gateOpen && !holdingGateClosed && currentVel >= targetVel * GATE_OPEN_THRESHOLD) {
                 openGate.run();
                 gateOpen = true;
             } else if (gateOpen && currentVel <= targetVel * GATE_CLOSE_THRESHOLD) {
                 closeGate.run();
                 gateOpen = false;
+                holdingGateClosed = true;
+                shotCount++;
+                closeHoldTimer.reset();
             }
         }
 
         boolean isGateOpen() {
             return gateOpen;
+        }
+
+        int getShotCount() {
+            return shotCount;
         }
     }
 
@@ -436,8 +451,8 @@ public class Robot {
     }
 
     /**
-     * Call every loop in TeleOp (or Auto) to automatically open launcher gates at >= 95% target
-     * velocity and close them if velocity drops to <= 90%.
+     * Call every loop in TeleOp (or Auto) to automatically open launcher gates at >= 98% target
+     * velocity and close them (for at least 200ms) if velocity drops to <= 96%.
      */
     public void updateLaunchers() {
         pollenController.update();
@@ -445,7 +460,78 @@ public class Robot {
     }
 
     /**
-     * Helper for Autonomous: maintains 95%/90% gated launching for the given duration in seconds.
+     * Helper for Autonomous: waits until the given launcher reaches >= 98% speed and opens its gate
+     * (or until timeoutSeconds elapses).
+     */
+    private void waitForGateOpen(LauncherController controller, double timeoutSeconds) {
+        ElapsedTime timer = new ElapsedTime();
+        while (opMode.opModeIsActive()
+                && timer.seconds() < timeoutSeconds
+                && !controller.isGateOpen()) {
+            controller.update();
+            logLauncherVelocity();
+            opMode.sleep(10);
+        }
+    }
+
+    public void waitForPollenGateOpen(double timeoutSeconds) {
+        waitForGateOpen(pollenController, timeoutSeconds);
+    }
+
+    public void waitForNectarGateOpen(double timeoutSeconds) {
+        waitForGateOpen(nectarController, timeoutSeconds);
+    }
+
+    /**
+     * Helper for Autonomous: keeps updating the launcher gate until targetBalls shots are detected
+     * (or timeoutSeconds elapses), then waits briefly for the final ball to clear the wheel.
+     */
+    private void waitForShots(LauncherController controller, int targetBalls, double timeoutSeconds) {
+        ElapsedTime timer = new ElapsedTime();
+        while (opMode.opModeIsActive()
+                && timer.seconds() < timeoutSeconds
+                && controller.getShotCount() < targetBalls) {
+            controller.update();
+            logLauncherVelocity();
+            opMode.sleep(10);
+        }
+        // Let the final ball fully exit the flywheel under PIDF power
+        if (opMode.opModeIsActive()) {
+            opMode.sleep(250);
+        }
+    }
+
+    public void waitForPollenShots(int targetBalls, double timeoutSeconds) {
+        waitForShots(pollenController, targetBalls, timeoutSeconds);
+    }
+
+    public void waitForNectarShots(int targetBalls, double timeoutSeconds) {
+        waitForShots(nectarController, targetBalls, timeoutSeconds);
+    }
+
+    /**
+     * Helper for Autonomous: spins up a launcher with PIDF, waits for the gate to open before
+     * turning on transferIntake, launches targetBalls shots, then shuts off intake and launcher.
+     */
+    private void launchBallCount(LauncherController controller, double power, int targetBalls, double timeoutSeconds) {
+        controller.start(power);
+        waitForGateOpen(controller, timeoutSeconds);
+        setTransferIntake(1);
+        waitForShots(controller, targetBalls, timeoutSeconds);
+        setTransferIntake(0);
+        controller.stop();
+    }
+
+    public void launchPollenCount(double power, int targetBalls, double timeoutSeconds) {
+        launchBallCount(pollenController, power, targetBalls, timeoutSeconds);
+    }
+
+    public void launchNectarCount(double power, int targetBalls, double timeoutSeconds) {
+        launchBallCount(nectarController, power, targetBalls, timeoutSeconds);
+    }
+
+    /**
+     * Helper for Autonomous: maintains velocity-gated launching for the given duration in seconds.
      */
     public void runLaunchersForSeconds(double durationSeconds) {
         ElapsedTime timer = new ElapsedTime();
