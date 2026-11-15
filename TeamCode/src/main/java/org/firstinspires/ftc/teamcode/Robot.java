@@ -76,7 +76,7 @@ public class Robot {
     public static double GATE_OPEN_THRESHOLD = 0.99;
     public static double GATE_CLOSE_THRESHOLD = 0.975;
     public static double GATE_MIN_CLOSE_SECONDS = 0.20;
-    public static long POST_MOVE_PAUSE_MS = 101;
+    public static long POST_MOVE_PAUSE_MS = 100;
 
     // Track last applied PIDF values so live FTC Dashboard edits push to the REV Hub automatically
     private double appliedP = Double.NaN;
