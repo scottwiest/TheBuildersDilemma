@@ -3,8 +3,8 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-@TeleOp(name = "TeleOp")
-public class TeleOpTbd extends LinearOpMode {
+@TeleOp(name = "TeleOp2Driver")
+public class TeleOp2Drivers extends LinearOpMode {
 
     private final Robot robot = new Robot(this);
 
@@ -20,9 +20,9 @@ public class TeleOpTbd extends LinearOpMode {
         while (opModeIsActive()) {
             // Read gamepad inputs
             // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
-            double forward = -gamepad1.left_stick_y;  // Note: pushing stick forward gives negative value
-            double right = gamepad1.left_stick_x;
-            double rotate = gamepad1.right_stick_x;
+            double forward = -gamepad2.left_stick_y;  // Note: pushing stick forward gives negative value
+            double right = gamepad2.left_stick_x;
+            double rotate = gamepad2.right_stick_x;
 
             robot.setDrivePower(forward, right, rotate);
 
@@ -48,17 +48,16 @@ public class TeleOpTbd extends LinearOpMode {
 
             robot.updateLaunchers();
 
-
-            if (gamepad1.aWasPressed()) {
+            if (gamepad1.yWasPressed()) {
                 robot.setTransferIntake(Robot.INTAKE_POWER);
             }
-            if (gamepad1.aWasReleased()) {
+            if (gamepad1.yWasReleased()) {
                 robot.setTransferIntake(0);
             }
-            if (gamepad1.bWasPressed()) {
+            if (gamepad1.aWasPressed()) {
                 robot.setTransferIntake(Robot.INTAKE_REVERSE_POWER);
             }
-            if (gamepad1.bWasReleased()) {
+            if (gamepad1.aWasReleased()) {
                 robot.setTransferIntake(0);
             }
 

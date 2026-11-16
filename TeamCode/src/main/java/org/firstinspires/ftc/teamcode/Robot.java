@@ -368,9 +368,9 @@ public class Robot {
         double targetRpm = controller.getTargetPower() * LAUNCHER_MAX_RPM;
         opMode.telemetry.addData(name + " RPM", Math.round(currentRpm));
         opMode.telemetry.addData(name + " Target RPM", Math.round(targetRpm));
-        opMode.telemetry.addData(name + " Gate", "%s (Shots: %d)",
-                controller.isGateOpen() ? "OPEN" : "CLOSED",
-                controller.getShotCount());
+        opMode.telemetry.addData(name + " Delta", Math.round(currentRpm - targetRpm));
+        opMode.telemetry.addData(name + " Gate", "%s",
+                controller.isGateOpen() ? "OPEN" : "CLOSED");
     }
 
     public void logLauncherVelocity() {
@@ -415,7 +415,6 @@ public class Robot {
         private double targetPower = 0.0;
         private boolean gateOpen = false;
         private boolean holdingGateClosed = false;
-        private int shotCount = 0;
 
         LauncherController(DcMotorEx motor, Runnable openGate, Runnable closeGate) {
             this.motor = motor;
@@ -433,7 +432,6 @@ public class Robot {
             }
             targetPower = power;
             holdingGateClosed = false;
-            shotCount = 0;
             if (!gateOpen) {
                 closeGate.run();
             }
@@ -464,7 +462,6 @@ public class Robot {
             } else if (gateOpen && currentVel <= targetVel * GATE_CLOSE_THRESHOLD) {
                 gateOpen = false;
                 holdingGateClosed = true;
-                shotCount++;
                 closeHoldTimer.reset();
             }
 
@@ -478,10 +475,6 @@ public class Robot {
 
         boolean isGateOpen() {
             return gateOpen;
-        }
-
-        int getShotCount() {
-            return shotCount;
         }
 
         double getTargetPower() {

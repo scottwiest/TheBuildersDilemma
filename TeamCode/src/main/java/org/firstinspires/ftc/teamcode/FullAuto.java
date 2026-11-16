@@ -17,6 +17,8 @@ public class FullAuto extends LinearOpMode {
     public static double STRAFE_TIMEOUT_S = 5.0;
     public static long GATE_OPEN_MS = 300;
     public static long GATE_CLOSED_MS = 600;
+    public static long WAIT_FOR_INTAKE_BALLS = 3_000;
+    public static long WAIT_FOR_FINAL_BALL = 1_000;
 
     private final Robot robot = new Robot(this);
 
@@ -41,6 +43,9 @@ public class FullAuto extends LinearOpMode {
         gateClosedWaitToOpen();
 
         robot.setTransferIntake(Robot.INTAKE_POWER);
+        robot.pollenGateClose();
+        // wait for intake balls
+        sleep(WAIT_FOR_INTAKE_BALLS);
         // Third ball
         gateClosedWaitToOpen();
         // Fourth ball
@@ -49,6 +54,7 @@ public class FullAuto extends LinearOpMode {
         robot.setTransferIntake(0);
         robot.stopPollenLauncher();
 
+        sleep(WAIT_FOR_FINAL_BALL);
         robot.runStrafeInstructions(STRAFE_POWER, STRAFE_INCHES, STRAFE_TIMEOUT_S);
     }
 
