@@ -589,12 +589,12 @@ public class Robot {
         double r = Math.hypot(right, forward);
 
         // Second, rotate angle by the angle the robot is pointing
-        double newTheta = AngleUnit.normalizeRadians(theta -
+        double deltaTheta = AngleUnit.normalizeRadians(theta -
                 imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS));
 
         // Third, convert back to Cartesian
-        double newForward = r * Math.sin(newTheta);
-        double newRight = r * Math.cos(newTheta);
+        double newForward = r * Math.sin(deltaTheta);
+        double newRight = r * Math.cos(deltaTheta);
 
         // Finally, call the drive method with robot relative forward and right amounts
         setDrivePower(newForward, newRight, rotate);
