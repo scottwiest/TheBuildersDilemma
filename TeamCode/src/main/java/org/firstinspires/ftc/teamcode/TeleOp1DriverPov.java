@@ -3,8 +3,8 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-@TeleOp(name = "TeleOp2Driver")
-public class TeleOp2Drivers extends LinearOpMode {
+@TeleOp(name = "TeleOp1DriverPov", group = "B")
+public class TeleOp1DriverPov extends LinearOpMode {
 
     private final Robot robot = new Robot(this);
 
@@ -20,11 +20,11 @@ public class TeleOp2Drivers extends LinearOpMode {
         while (opModeIsActive()) {
             // Read gamepad inputs
             // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
-            double forward = -gamepad2.left_stick_y;  // Note: pushing stick forward gives negative value
-            double right = gamepad2.left_stick_x;
-            double rotate = gamepad2.right_stick_x;
+            double forward = -gamepad1.left_stick_y;  // Note: pushing stick forward gives negative value
+            double right = gamepad1.left_stick_x;
+            double rotate = gamepad1.right_stick_x;
 
-            robot.setRelativeDrive(gamepad2, forward, right, rotate);
+            robot.setDrivePower(forward, right, rotate);
 
             // Pollen Launcher & Gate Control:
             // Left trigger starts spin-up (opens gate at >=98%, closes at <=96%);
@@ -47,6 +47,7 @@ public class TeleOp2Drivers extends LinearOpMode {
             }
 
             robot.updateLaunchers();
+
 
             if (gamepad1.yWasPressed()) {
                 robot.setTransferIntake(Robot.INTAKE_POWER);

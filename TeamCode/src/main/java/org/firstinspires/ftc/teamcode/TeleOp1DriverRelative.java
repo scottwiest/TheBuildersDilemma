@@ -3,8 +3,8 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-@TeleOp(name = "TeleOp1Driver")
-public class TeleOp1Driver extends LinearOpMode {
+@TeleOp(name = "TeleOp1DriverRelative", group = "A")
+public class TeleOp1DriverRelative extends LinearOpMode {
 
     private final Robot robot = new Robot(this);
 
