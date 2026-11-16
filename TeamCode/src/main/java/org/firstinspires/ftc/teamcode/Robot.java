@@ -572,7 +572,7 @@ public class Robot {
             double rotate
     ) {
         // Press X on the driving gamepad to reset Yaw to zero from the robot's current heading
-        if (driverGamepad.xWasPressed()) {
+        if (driverGamepad.x) {
             imu.resetYaw();
         }
         // Hold B on the driving gamepad to temporarily drive in robot POV
