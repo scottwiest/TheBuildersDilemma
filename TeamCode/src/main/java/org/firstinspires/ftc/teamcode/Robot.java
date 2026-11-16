@@ -37,6 +37,7 @@ public class Robot {
     private LauncherController nectarController = null;
     private final LinearOpMode opMode;
     private IMU imu;
+    private double yawOffsetRad = 0.0;
     private final ElapsedTime runtime = new ElapsedTime();
     static final double WHEEL_TICKS_PER_REV = 537.7;
     static final double WHEEL_DIAMETER_INCHES = 4.0;
@@ -565,16 +566,29 @@ public class Robot {
         setRelativeDrive(opMode.gamepad1, forward, right, rotate);
     }
 
+    private void resetHeading(double headingDegrees) {
+        imu.resetYaw();
+        yawOffsetRad = Math.toRadians(headingDegrees);
+    }
+
     public void setRelativeDrive(
             Gamepad driverGamepad,
             double forward,
             double right,
             double rotate
     ) {
-        // Press X on the driving gamepad to reset Yaw to zero from the robot's current heading
-        if (driverGamepad.x) {
-            imu.resetYaw();
+        // Tell the robot which direction its front is currently facing relative to the driver:
+        // D-Pad Up (or X) = Away (0°), Right = Right (-90°), Down = Towards (180°), Left = Left (+90°)
+        if (driverGamepad.dpad_up || driverGamepad.x) {
+            resetHeading(0.0);
+        } else if (driverGamepad.dpad_right) {
+            resetHeading(-90.0);
+        } else if (driverGamepad.dpad_down) {
+            resetHeading(180.0);
+        } else if (driverGamepad.dpad_left) {
+            resetHeading(90.0);
         }
+
         // Hold B on the driving gamepad to temporarily drive in robot POV
         if (driverGamepad.b) {
             setDrivePower(forward, right, rotate);
@@ -588,9 +602,9 @@ public class Robot {
         double theta = Math.atan2(forward, right);
         double r = Math.hypot(right, forward);
 
-        // Second, rotate angle by the angle the robot is pointing
-        double deltaTheta = AngleUnit.normalizeRadians(theta -
-                imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS));
+        // Second, rotate angle by the robot's current field heading (IMU yaw + reset offset)
+        double headingRad = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS) + yawOffsetRad;
+        double deltaTheta = AngleUnit.normalizeRadians(theta - headingRad);
 
         // Third, convert back to Cartesian
         double newForward = r * Math.sin(deltaTheta);
