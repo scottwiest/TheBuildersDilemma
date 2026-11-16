@@ -24,7 +24,7 @@ public class TeleOp2Drivers extends LinearOpMode {
             double right = gamepad2.left_stick_x;
             double rotate = gamepad2.right_stick_x;
 
-            robot.setDrivePower(forward, right, rotate);
+            robot.setRelativeDrive(gamepad2, forward, right, rotate);
 
             // Pollen Launcher & Gate Control:
             // Left trigger starts spin-up (opens gate at >=98%, closes at <=96%);

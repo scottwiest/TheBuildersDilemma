@@ -8,6 +8,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotor.RunMode;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
@@ -149,13 +150,10 @@ public class Robot {
 
         imu = hardwareMap.get(IMU.class, "imu");
 
-        RevHubOrientationOnRobot.LogoFacingDirection logoDirection =
-                RevHubOrientationOnRobot.LogoFacingDirection.FORWARD;
-        RevHubOrientationOnRobot.UsbFacingDirection usbDirection =
-                RevHubOrientationOnRobot.UsbFacingDirection.UP;
-
-        RevHubOrientationOnRobot orientationOnRobot = new
-                RevHubOrientationOnRobot(logoDirection, usbDirection);
+        RevHubOrientationOnRobot orientationOnRobot = new RevHubOrientationOnRobot(
+                RevHubOrientationOnRobot.LogoFacingDirection.FORWARD,
+                RevHubOrientationOnRobot.UsbFacingDirection.UP
+        );
         imu.initialize(new IMU.Parameters(orientationOnRobot));
     }
 
@@ -564,14 +562,21 @@ public class Robot {
             double right,
             double rotate
     ) {
-        // If you press the A button, then you reset the Yaw to be zero from the way
-        // the robot is currently pointing
-        if (opMode.gamepad1.aWasPressed()) {
+        setRelativeDrive(opMode.gamepad1, forward, right, rotate);
+    }
+
+    public void setRelativeDrive(
+            Gamepad driverGamepad,
+            double forward,
+            double right,
+            double rotate
+    ) {
+        // Press X on the driving gamepad to reset Yaw to zero from the robot's current heading
+        if (driverGamepad.xWasPressed()) {
             imu.resetYaw();
         }
-        // If you press the B button, you get a drive from the point of view of the robot
-        // (much like driving an RC vehicle)
-        if (opMode.gamepad1.b) {
+        // Hold B on the driving gamepad to temporarily drive in robot POV
+        if (driverGamepad.b) {
             setDrivePower(forward, right, rotate);
         } else {
             driveFieldRelative(forward, right, rotate);
@@ -584,12 +589,12 @@ public class Robot {
         double r = Math.hypot(right, forward);
 
         // Second, rotate angle by the angle the robot is pointing
-        theta = AngleUnit.normalizeRadians(theta -
+        double newTheta = AngleUnit.normalizeRadians(theta -
                 imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS));
 
         // Third, convert back to Cartesian
-        double newForward = r * Math.sin(theta);
-        double newRight = r * Math.cos(theta);
+        double newForward = r * Math.sin(newTheta);
+        double newRight = r * Math.cos(newTheta);
 
         // Finally, call the drive method with robot relative forward and right amounts
         setDrivePower(newForward, newRight, rotate);
