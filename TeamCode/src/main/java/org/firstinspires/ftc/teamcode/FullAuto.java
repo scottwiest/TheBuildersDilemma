@@ -67,5 +67,5 @@ public class FullAuto extends LinearOpMode {
         sleep(GATE_CLOSED_MS);
         robot.pollenGateOpen();
         sleep(GATE_OPEN_MS);
-    }
+    }6
 }
