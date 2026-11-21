@@ -57,7 +57,7 @@ public class Robot {
     public static double INTAKE_POWER = 1.0;
     public static double INTAKE_REVERSE_POWER = -1.0;
 
-    public static double POLLEN_LAUNCHER_POWER = 0.405;
+    public static double POLLEN_LAUNCHER_POWER = 0.45;
     public static double NECTAR_LAUNCHER_POWER = 0.42;
 
     public static double POLLEN_GATE_OPEN_POS = 0.0;
