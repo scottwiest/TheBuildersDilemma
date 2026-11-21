@@ -11,7 +11,7 @@ public class FullAuto extends LinearOpMode {
     public static double DRIVE_POWER = 0.65;
     public static double STRAFE_POWER = 0.5;
     public static double DRIVE_FORWARD_INCHES = 10.0;
-    public static double STRAFE_INCHES = 45.0;
+    public static double STRAFE_INCHES = 22.5;
     public static double DRIVE_TIMEOUT_S = 5.0;
     public static double SPINUP_TIMEOUT_S = 5.0;
     public static double STRAFE_TIMEOUT_S = 5.0;
@@ -56,6 +56,8 @@ public class FullAuto extends LinearOpMode {
 
         sleep(WAIT_FOR_FINAL_BALL);
         robot.runStrafeInstructions(STRAFE_POWER, STRAFE_INCHES, STRAFE_TIMEOUT_S);
+        robot.runDriveInstructions(DRIVE_POWER,90,DRIVE_TIMEOUT_S);
+        robot.runStrafeInstructions(STRAFE_POWER,STRAFE_INCHES,STRAFE_TIMEOUT_S);
     }
 
     private void gateClosedWaitToOpen() {
