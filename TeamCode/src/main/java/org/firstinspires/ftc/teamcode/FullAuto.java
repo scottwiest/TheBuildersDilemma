@@ -55,6 +55,8 @@ public class FullAuto extends LinearOpMode {
         robot.stopPollenLauncher();
 
         sleep(WAIT_FOR_FINAL_BALL);
+
+        //Move into parking zone
         robot.runStrafeInstructions(STRAFE_POWER, STRAFE_INCHES, STRAFE_TIMEOUT_S);
         robot.runDriveInstructions(DRIVE_POWER,90,DRIVE_TIMEOUT_S);
         robot.runStrafeInstructions(STRAFE_POWER,STRAFE_INCHES,STRAFE_TIMEOUT_S);
