@@ -18,12 +18,16 @@ apply from: '../build.dependencies.gradle'
 
 android {
     namespace = 'org.firstinspires.ftc.teamcode'
+    compileSdk = 37
 
-    packagingOptions {
-        jniLibs.useLegacyPackaging true
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
     }
 }
 
 dependencies {
     implementation project(':FtcRobotController')
+    implementation 'com.acmerobotics.dashboard:dashboard:0.6.0'
 }

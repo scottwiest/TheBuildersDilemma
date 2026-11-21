@@ -1,10 +1,14 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.config.Config;
+import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotor.RunMode;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
@@ -16,6 +20,8 @@ import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 
+@Config
+@SuppressWarnings("unused")
 public class Robot {
     // Declare hardware members
     private DcMotor frontLeftWheel = null;
@@ -27,12 +33,16 @@ public class Robot {
     private DcMotor transferIntake = null;
     private Servo nectarGate = null;
     private Servo pollenGate = null;
-    private LinearOpMode opMode;
+    private LauncherController pollenController = null;
+    private LauncherController nectarController = null;
+    private final LinearOpMode opMode;
     private IMU imu;
-    private ElapsedTime runtime = new ElapsedTime();
-    static final double COUNTS_PER_TIRE_REV = 537.7;
+    private double yawOffsetRad = 0.0;
+    private final ElapsedTime runtime = new ElapsedTime();
+    static final double WHEEL_TICKS_PER_REV = 537.7;
     static final double WHEEL_DIAMETER_INCHES = 4.0;
-    static final double COUNTS_PER_INCH = (COUNTS_PER_TIRE_REV) / (WHEEL_DIAMETER_INCHES * 3.14159);
+    static final double WHEEL_COUNTS_PER_INCH = (WHEEL_TICKS_PER_REV) / (WHEEL_DIAMETER_INCHES * Math.PI);
+    private static final long LOOP_POLL_MS = 10;
 
     // GoBilda 5203 (6000 RPM, 1:1 ratio) Launcher Motor Constants
     public static final double LAUNCHER_TICKS_PER_REV = 28.0;
@@ -40,24 +50,41 @@ public class Robot {
     // Max ticks/sec = (6000 RPM / 60 sec) * 28 ticks/rev = 2800 ticks/sec
     public static final double LAUNCHER_MAX_TICKS_PER_SEC = (LAUNCHER_MAX_RPM / 60.0) * LAUNCHER_TICKS_PER_REV;
 
-    // Default target velocities (in ticks/sec) for Auto & TeleOp
-    public static final double DEFAULT_POLLEN_VELOCITY = 0.55 * LAUNCHER_MAX_TICKS_PER_SEC; // 1540 ticks/sec (3300 RPM)
-    public static final double DEFAULT_NECTAR_VELOCITY = 0.50 * LAUNCHER_MAX_TICKS_PER_SEC; // 1400 ticks/sec (3000 RPM)
+    // --- Live-tunable FTC Dashboard (@Config) variables (must be public static & non-final) ---
+    public static double DRIVE_SCALING = 0.85;
+    public static double STRAFE_MULTIPLIER = 1.2;
 
-    // REV Hub Velocity PIDF starting coefficients for GoBilda 5203 6000 RPM:
-    // F = 32767 / max_ticks_per_sec = 32767 / 2800 ≈ 11.7025
-    // P = 0.1 * F ≈ 1.17 (can be tuned higher, e.g., 5.0 - 12.0, for faster recovery between shots)
-    // I = 0.1 * P ≈ 0.117 (set to 0.0 if flywheel overshoots after spin-up)
-    // D = 0.0
-    public static final double LAUNCHER_F = 32767.0 / LAUNCHER_MAX_TICKS_PER_SEC;
-    public static final double LAUNCHER_P = 0.1 * LAUNCHER_F;
-    public static final double LAUNCHER_I = 0.1 * LAUNCHER_P;
-    public static final double LAUNCHER_D = 0.0;
+    public static double INTAKE_POWER = 1.0;
+    public static double INTAKE_REVERSE_POWER = -1.0;
 
-    public static final PIDFCoefficients POLLEN_PIDF_COEFFS =
-            new PIDFCoefficients(LAUNCHER_P, LAUNCHER_I, LAUNCHER_D, LAUNCHER_F);
-    public static final PIDFCoefficients NECTAR_PIDF_COEFFS =
-            new PIDFCoefficients(LAUNCHER_P, LAUNCHER_I, LAUNCHER_D, LAUNCHER_F);
+    public static double POLLEN_LAUNCHER_POWER = 0.405;
+    public static double NECTAR_LAUNCHER_POWER = 0.42;
+
+    public static double POLLEN_GATE_OPEN_POS = 0.0;
+    public static double POLLEN_GATE_CLOSE_POS = 0.11;
+    public static double NECTAR_GATE_OPEN_POS = 0.12;
+    public static double NECTAR_GATE_CLOSE_POS = 0.0;
+
+    // REV Hub Velocity PIDF coefficients for GoBilda 5203 6000 RPM flywheel:
+    // F = 32767 / max_ticks_per_sec ≈ 11.70 (increase slightly, e.g. 12.5, if steady RPM sits below target)
+    // P = 60.0 (strong recovery boost when a ball drops wheel speed; tune between 40.0 and 100.0)
+    // I = 0.0  (kept at 0 so spin-up doesn't overshoot and launch the 1st ball higher than the rest)
+    // D = 0.0  (kept at 0 to avoid amplifying 28-tick encoder noise)
+    public static double LAUNCHER_F = Short.MAX_VALUE / LAUNCHER_MAX_TICKS_PER_SEC;
+    public static double LAUNCHER_P = 6.0;
+    public static double LAUNCHER_I = 0.1;
+    public static double LAUNCHER_D = 0.0;
+
+    public static double GATE_OPEN_THRESHOLD = 0.99;
+    public static double GATE_CLOSE_THRESHOLD = 0.975;
+    public static double GATE_MIN_CLOSE_SECONDS = 0.20;
+    public static long POST_MOVE_PAUSE_MS = 100;
+
+    // Track last applied PIDF values so live FTC Dashboard edits push to the REV Hub automatically
+    private double appliedP = Double.NaN;
+    private double appliedI = Double.NaN;
+    private double appliedD = Double.NaN;
+    private double appliedF = Double.NaN;
 
     // Constructor
     public Robot(LinearOpMode opMode) {
@@ -66,6 +93,11 @@ public class Robot {
 
     // Initialize standard Hardware interfaces
     public void init(HardwareMap hardwareMap) {
+        // Send telemetry to both Driver Hub and FTC Dashboard (for live graphs & values)
+        opMode.telemetry = new MultipleTelemetry(
+                opMode.telemetry,
+                FtcDashboard.getInstance().getTelemetry()
+        );
 
         // Map devices to the names configured on the Driver Station / Control Hub
         frontLeftWheel = hardwareMap.get(DcMotor.class, "front_left_wheel");
@@ -79,12 +111,12 @@ public class Robot {
         pollenGate = hardwareMap.get(Servo.class, "pollen_gate");
 
         // Set motor directions (adjust according to your drivetrain orientation)
-        frontLeftWheel.setDirection(DcMotor.Direction.FORWARD);
-        backLeftWheel.setDirection(DcMotor.Direction.REVERSE);
-        frontRightWheel.setDirection(DcMotor.Direction.REVERSE);
-        backRightWheel.setDirection(DcMotor.Direction.FORWARD);
-        pollenLauncher.setDirection(DcMotorEx.Direction.FORWARD);
-        nectarLauncher.setDirection(DcMotorEx.Direction.REVERSE);
+        frontLeftWheel.setDirection(DcMotorSimple.Direction.FORWARD);
+        backLeftWheel.setDirection(DcMotorSimple.Direction.REVERSE);
+        frontRightWheel.setDirection(DcMotorSimple.Direction.REVERSE);
+        backRightWheel.setDirection(DcMotorSimple.Direction.FORWARD);
+        pollenLauncher.setDirection(DcMotorSimple.Direction.FORWARD);
+        nectarLauncher.setDirection(DcMotorSimple.Direction.REVERSE);
         transferIntake.setDirection(DcMotorSimple.Direction.REVERSE);
 
         // Set zero-power behavior
@@ -95,17 +127,19 @@ public class Robot {
         pollenLauncher.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         nectarLauncher.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
-        frontRightWheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        backRightWheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        frontLeftWheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        backLeftWheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        frontRightWheel.setMode(RunMode.STOP_AND_RESET_ENCODER);
+        backRightWheel.setMode(RunMode.STOP_AND_RESET_ENCODER);
+        frontLeftWheel.setMode(RunMode.STOP_AND_RESET_ENCODER);
+        backLeftWheel.setMode(RunMode.STOP_AND_RESET_ENCODER);
 
-        frontLeftWheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        backLeftWheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        frontRightWheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        backRightWheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        frontLeftWheel.setMode(RunMode.RUN_USING_ENCODER);
+        backLeftWheel.setMode(RunMode.RUN_USING_ENCODER);
+        frontRightWheel.setMode(RunMode.RUN_USING_ENCODER);
+        backRightWheel.setMode(RunMode.RUN_USING_ENCODER);
 
         configureLaunchersPIDF();
+        pollenController = new LauncherController(pollenLauncher, this::pollenGateOpen, this::pollenGateClose);
+        nectarController = new LauncherController(nectarLauncher, this::nectarGateOpen, this::nectarGateClose);
 
         // Reset and stop motors
         frontLeftWheel.setPower(0);
@@ -117,13 +151,10 @@ public class Robot {
 
         imu = hardwareMap.get(IMU.class, "imu");
 
-        RevHubOrientationOnRobot.LogoFacingDirection logoDirection =
-                RevHubOrientationOnRobot.LogoFacingDirection.UP;
-        RevHubOrientationOnRobot.UsbFacingDirection usbDirection =
-                RevHubOrientationOnRobot.UsbFacingDirection.FORWARD;
-
-        RevHubOrientationOnRobot orientationOnRobot = new
-                RevHubOrientationOnRobot(logoDirection, usbDirection);
+        RevHubOrientationOnRobot orientationOnRobot = new RevHubOrientationOnRobot(
+                RevHubOrientationOnRobot.LogoFacingDirection.FORWARD,
+                RevHubOrientationOnRobot.UsbFacingDirection.UP
+        );
         imu.initialize(new IMU.Parameters(orientationOnRobot));
     }
 
@@ -134,8 +165,26 @@ public class Robot {
         pollenLauncher.setMode(RunMode.RUN_USING_ENCODER);
         nectarLauncher.setMode(RunMode.RUN_USING_ENCODER);
 
-        pollenLauncher.setPIDFCoefficients(RunMode.RUN_USING_ENCODER, POLLEN_PIDF_COEFFS);
-        nectarLauncher.setPIDFCoefficients(RunMode.RUN_USING_ENCODER, NECTAR_PIDF_COEFFS);
+        applyCurrentPIDF();
+    }
+
+    private void applyCurrentPIDF() {
+        PIDFCoefficients coeffs = new PIDFCoefficients(LAUNCHER_P, LAUNCHER_I, LAUNCHER_D, LAUNCHER_F);
+        pollenLauncher.setPIDFCoefficients(RunMode.RUN_USING_ENCODER, coeffs);
+        nectarLauncher.setPIDFCoefficients(RunMode.RUN_USING_ENCODER, coeffs);
+        appliedP = LAUNCHER_P;
+        appliedI = LAUNCHER_I;
+        appliedD = LAUNCHER_D;
+        appliedF = LAUNCHER_F;
+    }
+
+    private void syncPIDFIfChanged() {
+        if (LAUNCHER_P != appliedP
+                || LAUNCHER_I != appliedI
+                || LAUNCHER_D != appliedD
+                || LAUNCHER_F != appliedF) {
+            applyCurrentPIDF();
+        }
     }
 
     public void setRunUsingEncoder() {
@@ -175,18 +224,46 @@ public class Robot {
             backRightPower /= max;
         }
 
-        double scalingFactor = 0.65;
-        // Send calculated power to wheels
-        frontLeftWheel.setPower(frontLeftPower * scalingFactor);
-        frontRightWheel.setPower(frontRightPower * scalingFactor);
-        backLeftWheel.setPower(backLeftPower * scalingFactor);
-        backRightWheel.setPower(backRightPower * scalingFactor);
+        // Send calculated power to wheels (DRIVE_SCALING is live-editable in FTC Dashboard)
+        frontLeftWheel.setPower(frontLeftPower * DRIVE_SCALING);
+        frontRightWheel.setPower(frontRightPower * DRIVE_SCALING);
+        backLeftWheel.setPower(backLeftPower * DRIVE_SCALING);
+        backRightWheel.setPower(backRightPower * DRIVE_SCALING);
     }
 
+    /**
+     * Drives forward/backward or turns in place using encoder targets for left and right sides.
+     */
     public void runDriveInstructions(
-            double speed,
+            double power,
             double leftInches,
             double rightInches,
+            double timeoutS
+    ) {
+        runDriveInstructions(power, leftInches, rightInches, leftInches, rightInches, timeoutS);
+    }
+
+    /**
+     * Strafes sideways using encoders: positive rightInches strafes RIGHT, negative strafes LEFT.
+     */
+    public void runStrafeInstructions(
+            double power,
+            double rightInches,
+            double timeoutS
+    ) {
+        double d = rightInches * STRAFE_MULTIPLIER;
+        runDriveInstructions(power, d, -d, -d, d, timeoutS);
+    }
+
+    /**
+     * Moves all four wheels to individual encoder distance targets (in inches).
+     */
+    private void runDriveInstructions(
+            double power,
+            double frontLeftInches,
+            double frontRightInches,
+            double backLeftInches,
+            double backRightInches,
             double timeoutS
     ) {
         int newLeftFrontTarget;
@@ -199,12 +276,13 @@ public class Robot {
 
             // Determine new target position, and pass to motor controller
             newLeftFrontTarget =
-                    frontLeftWheel.getCurrentPosition() + (int) (leftInches * COUNTS_PER_INCH);
+                    frontLeftWheel.getCurrentPosition() + (int) (frontLeftInches * WHEEL_COUNTS_PER_INCH);
             newRightFrontTarget =
-                    frontRightWheel.getCurrentPosition() + (int) (rightInches * COUNTS_PER_INCH);
-            newLeftBackTarget = backLeftWheel.getCurrentPosition() + (int) (leftInches * COUNTS_PER_INCH);
+                    frontRightWheel.getCurrentPosition() + (int) (frontRightInches * WHEEL_COUNTS_PER_INCH);
+            newLeftBackTarget =
+                    backLeftWheel.getCurrentPosition() + (int) (backLeftInches * WHEEL_COUNTS_PER_INCH);
             newRightBackTarget =
-                    backRightWheel.getCurrentPosition() + (int) (rightInches * COUNTS_PER_INCH);
+                    backRightWheel.getCurrentPosition() + (int) (backRightInches * WHEEL_COUNTS_PER_INCH);
             frontLeftWheel.setTargetPosition(newLeftFrontTarget);
             frontRightWheel.setTargetPosition(newRightFrontTarget);
             backLeftWheel.setTargetPosition(newLeftBackTarget);
@@ -218,10 +296,10 @@ public class Robot {
 
             // reset the timeout time and start motion.
             runtime.reset();
-            frontLeftWheel.setPower(Math.abs(speed));
-            frontRightWheel.setPower(Math.abs(speed));
-            backLeftWheel.setPower(Math.abs(speed));
-            backRightWheel.setPower(Math.abs(speed));
+            frontLeftWheel.setPower(Math.abs(power));
+            frontRightWheel.setPower(Math.abs(power));
+            backLeftWheel.setPower(Math.abs(power));
+            backRightWheel.setPower(Math.abs(power));
 
             // keep looping while we are still active, and there is time left, and both motors are running.
             // Note: We use (isBusy() && isBusy()) in the loop test, which means that when EITHER motor hits
@@ -233,7 +311,7 @@ public class Robot {
                     (runtime.seconds() < timeoutS) &&
                     (frontLeftWheel.isBusy() && frontRightWheel.isBusy() && backLeftWheel.isBusy()
                             && backRightWheel.isBusy())) {
-                opMode.sleep(10);
+                opMode.sleep(LOOP_POLL_MS);
             }
 
             // Stop all motion;
@@ -248,24 +326,9 @@ public class Robot {
             backLeftWheel.setMode(RunMode.RUN_USING_ENCODER);
             backRightWheel.setMode(RunMode.RUN_USING_ENCODER);
 
-            opMode.sleep(100);   // pause after each move.
+            opMode.sleep(POST_MOVE_PAUSE_MS);   // pause after each move.
         }
     }
-
-    public void leftStrafe() {
-        frontRightWheel.setPower(1);
-        frontLeftWheel.setPower(-1);
-        backRightWheel.setPower(-1);
-        backLeftWheel.setPower(1);
-    }
-
-    public void rightStrafe() {
-        frontRightWheel.setPower(-1);
-        frontLeftWheel.setPower(1);
-        backRightWheel.setPower(1);
-        backLeftWheel.setPower(-1);
-    }
-
 
     /**
      * Sets the pollen launcher speed as a fraction of max velocity (-1.0 to 1.0)
@@ -276,41 +339,11 @@ public class Robot {
     }
 
     /**
-     * Sets the pollen launcher target velocity directly in encoder ticks per second.
-     */
-    public void setPollenLauncherVelocity(double ticksPerSec) {
-        pollenLauncher.setVelocity(ticksPerSec);
-    }
-
-    /**
-     * Sets the pollen launcher target speed in RPM (up to 6000 RPM for GoBilda 5203).
-     */
-    public void setPollenLauncherRPM(double rpm) {
-        double ticksPerSec = (rpm / 60.0) * LAUNCHER_TICKS_PER_REV;
-        pollenLauncher.setVelocity(ticksPerSec);
-    }
-
-    /**
      * Sets the nectar launcher speed as a fraction of max velocity (-1.0 to 1.0)
      * using built-in DcMotorEx PIDF velocity control.
      */
     public void setNectarLauncher(double power) {
         nectarLauncher.setVelocity(power * LAUNCHER_MAX_TICKS_PER_SEC);
-    }
-
-    /**
-     * Sets the nectar launcher target velocity directly in encoder ticks per second.
-     */
-    public void setNectarLauncherVelocity(double ticksPerSec) {
-        nectarLauncher.setVelocity(ticksPerSec);
-    }
-
-    /**
-     * Sets the nectar launcher target speed in RPM (up to 6000 RPM for GoBilda 5203).
-     */
-    public void setNectarLauncherRPM(double rpm) {
-        double ticksPerSec = (rpm / 60.0) * LAUNCHER_TICKS_PER_REV;
-        nectarLauncher.setVelocity(ticksPerSec);
     }
 
     public double getPollenLauncherVelocity() {
@@ -329,11 +362,19 @@ public class Robot {
         return (nectarLauncher.getVelocity() / LAUNCHER_TICKS_PER_REV) * 60.0;
     }
 
+    private void logSingleLauncher(String name, DcMotorEx motor, LauncherController controller) {
+        double currentRpm = (motor.getVelocity() / LAUNCHER_TICKS_PER_REV) * 60.0;
+        double targetRpm = controller.getTargetPower() * LAUNCHER_MAX_RPM;
+        opMode.telemetry.addData(name + " RPM", Math.round(currentRpm));
+        opMode.telemetry.addData(name + " Target RPM", Math.round(targetRpm));
+        opMode.telemetry.addData(name + " Delta", Math.round(currentRpm - targetRpm));
+        opMode.telemetry.addData(name + " Gate", "%s",
+                controller.isGateOpen() ? "OPEN" : "CLOSED");
+    }
+
     public void logLauncherVelocity() {
-        opMode.telemetry.addData("Pollen Velocity (ticks/s)", "%.1f (%.0f RPM)",
-                getPollenLauncherVelocity(), getPollenLauncherRPM());
-        opMode.telemetry.addData("Nectar Velocity (ticks/s)", "%.1f (%.0f RPM)",
-                getNectarLauncherVelocity(), getNectarLauncherRPM());
+        logSingleLauncher("Pollen", pollenLauncher, pollenController);
+        logSingleLauncher("Nectar", nectarLauncher, nectarController);
         opMode.telemetry.update();
     }
 
@@ -342,33 +383,179 @@ public class Robot {
     }
 
     public void pollenGateOpen() {
-        pollenGate.setPosition(0);
+        pollenGate.setPosition(POLLEN_GATE_OPEN_POS);
     }
 
     public void pollenGateClose() {
-        pollenGate.setPosition(0.11);
+        pollenGate.setPosition(POLLEN_GATE_CLOSE_POS);
     }
 
     public void nectarGateOpen() {
-        nectarGate.setPosition(0.1);
+        nectarGate.setPosition(NECTAR_GATE_OPEN_POS);
     }
 
     public void nectarGateClose() {
-        nectarGate.setPosition(0.0);
+        nectarGate.setPosition(NECTAR_GATE_CLOSE_POS);
     }
 
-    public void setNectarGatePosition(double position) {
-        nectarGate.setPosition(position);
+    public boolean isPollenGateOpen() {
+        return pollenController.isGateOpen();
     }
 
-    public void setPollenGatePosition(double position) {
-        pollenGate.setPosition(position);
+    /**
+     * Manages non-blocking velocity spin-up, 98%-open / 96%-close gate hysteresis,
+     * and a 200ms gate-close hold time so back-to-back balls feed one at a time.
+     */
+    private static class LauncherController {
+        private final DcMotorEx motor;
+        private final Runnable openGate;
+        private final Runnable closeGate;
+        private final ElapsedTime closeHoldTimer = new ElapsedTime();
+        private double targetPower = 0.0;
+        private boolean gateOpen = false;
+        private boolean holdingGateClosed = false;
+
+        LauncherController(DcMotorEx motor, Runnable openGate, Runnable closeGate) {
+            this.motor = motor;
+            this.openGate = openGate;
+            this.closeGate = closeGate;
+        }
+
+        void start(double power) {
+            if (power == 0.0) {
+                stop();
+                return;
+            }
+            if (targetPower == power) {
+                return;
+            }
+            targetPower = power;
+            holdingGateClosed = false;
+            if (!gateOpen) {
+                closeGate.run();
+            }
+            motor.setVelocity(power * LAUNCHER_MAX_TICKS_PER_SEC);
+        }
+
+        void stop() {
+            targetPower = 0.0;
+            gateOpen = false;
+            holdingGateClosed = false;
+            closeGate.run();
+            motor.setVelocity(0);
+        }
+
+        void update() {
+            if (targetPower == 0.0) {
+                return;
+            }
+            if (holdingGateClosed && closeHoldTimer.seconds() >= GATE_MIN_CLOSE_SECONDS) {
+                holdingGateClosed = false;
+            }
+
+            double targetVel = Math.abs(targetPower * LAUNCHER_MAX_TICKS_PER_SEC);
+            double currentVel = Math.abs(motor.getVelocity());
+
+            if (!gateOpen && !holdingGateClosed && currentVel >= targetVel * GATE_OPEN_THRESHOLD) {
+                gateOpen = true;
+            } else if (gateOpen && currentVel <= targetVel * GATE_CLOSE_THRESHOLD) {
+                gateOpen = false;
+                holdingGateClosed = true;
+                closeHoldTimer.reset();
+            }
+
+            // Apply current open/close servo position (picks up live FTC Dashboard edits immediately)
+            if (gateOpen) {
+                openGate.run();
+            } else {
+                closeGate.run();
+            }
+        }
+
+        boolean isGateOpen() {
+            return gateOpen;
+        }
+
+        double getTargetPower() {
+            return targetPower;
+        }
+
+        void syncRunningPower(double configuredPower) {
+            if (targetPower != 0.0 && targetPower != configuredPower) {
+                targetPower = configuredPower;
+                motor.setVelocity(configuredPower * LAUNCHER_MAX_TICKS_PER_SEC);
+            }
+        }
     }
 
-    public void logGatesPosition() {
-        opMode.telemetry.addData("Pollen Gate Position: ", pollenGate.getPosition());
-        opMode.telemetry.addData("Nectar Gate Position: ", nectarGate.getPosition());
-        opMode.telemetry.update();
+    public void startPollenLauncher() {
+        pollenController.start(POLLEN_LAUNCHER_POWER);
+    }
+
+    public void startPollenLauncher(double power) {
+        pollenController.start(power);
+    }
+
+    public void stopPollenLauncher() {
+        pollenController.stop();
+    }
+
+    public void startNectarLauncher() {
+        nectarController.start(NECTAR_LAUNCHER_POWER);
+    }
+
+    public void startNectarLauncher(double power) {
+        nectarController.start(power);
+    }
+
+    public void stopNectarLauncher() {
+        nectarController.stop();
+    }
+
+    /**
+     * Call every loop in TeleOp (or Auto) to automatically sync live Dashboard power/PIDF changes,
+     * open launcher gates at >= GATE_OPEN_THRESHOLD, and close them at <= GATE_CLOSE_THRESHOLD.
+     */
+    public void updateLaunchers() {
+        syncPIDFIfChanged();
+        pollenController.syncRunningPower(POLLEN_LAUNCHER_POWER);
+        nectarController.syncRunningPower(NECTAR_LAUNCHER_POWER);
+        pollenController.update();
+        nectarController.update();
+    }
+
+    /**
+     * Helper for Autonomous: waits until the given launcher reaches >= 98% speed and opens its gate
+     * (or until timeoutSeconds elapses).
+     */
+    private void waitForGateOpen(LauncherController controller, double timeoutSeconds) {
+        ElapsedTime timer = new ElapsedTime();
+        while (opMode.opModeIsActive()
+                && timer.seconds() < timeoutSeconds
+                && !controller.isGateOpen()) {
+            controller.update();
+            logLauncherVelocity();
+            opMode.sleep(LOOP_POLL_MS);
+        }
+    }
+
+    public void waitForPollenGateOpen(double timeoutSeconds) {
+        waitForGateOpen(pollenController, timeoutSeconds);
+    }
+
+    public void waitForNectarGateOpen(double timeoutSeconds) {
+        waitForGateOpen(nectarController, timeoutSeconds);
+    }
+
+    /**
+     * Helper for Autonomous: maintains velocity-gated launching for the given duration in seconds.
+     */
+    public void runLaunchersForSeconds(double durationSeconds) {
+        ElapsedTime timer = new ElapsedTime();
+        while (opMode.opModeIsActive() && timer.seconds() < durationSeconds) {
+            updateLaunchers();
+            opMode.sleep(LOOP_POLL_MS);
+        }
     }
 
     public void setRelativeDrive(
@@ -376,14 +563,34 @@ public class Robot {
             double right,
             double rotate
     ) {
-        // If you press the A button, then you reset the Yaw to be zero from the way
-        // the robot is currently pointing
-        if (opMode.gamepad1.aWasPressed()) {
-            imu.resetYaw();
+        setRelativeDrive(opMode.gamepad1, forward, right, rotate);
+    }
+
+    private void resetHeading(double headingDegrees) {
+        imu.resetYaw();
+        yawOffsetRad = Math.toRadians(headingDegrees);
+    }
+
+    public void setRelativeDrive(
+            Gamepad driverGamepad,
+            double forward,
+            double right,
+            double rotate
+    ) {
+        // Tell the robot which direction its front is currently facing relative to the driver:
+        // D-Pad Up (or X) = Away (0°), Right = Right (-90°), Down = Towards (180°), Left = Left (+90°)
+        if (driverGamepad.dpad_up || driverGamepad.x) {
+            resetHeading(0.0);
+        } else if (driverGamepad.dpad_right) {
+            resetHeading(-90.0);
+        } else if (driverGamepad.dpad_down) {
+            resetHeading(180.0);
+        } else if (driverGamepad.dpad_left) {
+            resetHeading(90.0);
         }
-        // If you press the left bumper, you get a drive from the point of view of the robot
-        // (much like driving an RC vehicle)
-        if (opMode.gamepad1.b) {
+
+        // Hold B on the driving gamepad to temporarily drive in robot POV
+        if (driverGamepad.b) {
             setDrivePower(forward, right, rotate);
         } else {
             driveFieldRelative(forward, right, rotate);
@@ -395,13 +602,13 @@ public class Robot {
         double theta = Math.atan2(forward, right);
         double r = Math.hypot(right, forward);
 
-        // Second, rotate angle by the angle the robot is pointing
-        theta = AngleUnit.normalizeRadians(theta -
-                imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS));
+        // Second, rotate angle by the robot's current field heading (IMU yaw + reset offset)
+        double headingRad = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS) + yawOffsetRad;
+        double deltaTheta = AngleUnit.normalizeRadians(theta - headingRad);
 
-        // Third, convert back to cartesian
-        double newForward = r * Math.sin(theta);
-        double newRight = r * Math.cos(theta);
+        // Third, convert back to Cartesian
+        double newForward = r * Math.sin(deltaTheta);
+        double newRight = r * Math.cos(deltaTheta);
 
         // Finally, call the drive method with robot relative forward and right amounts
         setDrivePower(newForward, newRight, rotate);
